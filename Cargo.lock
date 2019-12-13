@@ -322,6 +322,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 name = "scotty"
 version = "0.1.0"
 dependencies = [
+ "bincode 1.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "clap 2.33.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "exitfailure 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "failure 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",

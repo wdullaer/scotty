@@ -6,6 +6,7 @@ use std::io;
 use std::path::PathBuf;
 use std::ops::Deref;
 use std::convert::TryInto;
+use std::time::SystemTime;
 
 use failure::Error;
 use fst::{Set, SetBuilder};
@@ -42,7 +43,9 @@ impl Index {
         // Check if the path is already known and update its last modified timestamp
         let path_string = path_buf.to_string_lossy();
         let path_bytes = path_string.as_bytes();
-        match self.paths.insert(path_bytes, b"fooo")? {
+        // TODO: see if we can use Instant and if bincode is the best way to handle this
+        let time_bytes = bincode::serialize(&SystemTime::now())?;
+        match self.paths.insert(path_bytes, time_bytes)? {
             // New path: update the fst
             None => self.update_paths_index(path_bytes),
             _ => Ok(()),
