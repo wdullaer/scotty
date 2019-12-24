@@ -1,18 +1,21 @@
-#[macro_use] extern crate clap;
+#[macro_use]
+extern crate clap;
 extern crate exitfailure;
-#[macro_use] extern crate failure;
+#[macro_use]
+extern crate failure;
 
-use std::convert::TryFrom;
-use std::path::PathBuf;
 use clap::{App, AppSettings, Arg, SubCommand};
 use exitfailure::ExitFailure;
 use failure::Error;
+use std::convert::TryFrom;
+use std::path::PathBuf;
 
-use crate::init::Shell;
 use crate::index::Index;
+use crate::init::Shell;
 
-mod init;
 mod index;
+mod init;
+mod jump;
 
 fn main() -> Result<(), ExitFailure> {
     let path_arg = Arg::with_name("path")
@@ -57,7 +60,7 @@ fn main() -> Result<(), ExitFailure> {
             let path = sub_m.value_of("path").expect("Path is missing");
 
             // TODO: investigate the log crate for error handling
-           Ok(run_add(path)?)
+            Ok(run_add(path)?)
         }
         ("jump", Some(sub_m)) => {
             let target = sub_m.value_of("target").expect("Target is missing");
@@ -69,7 +72,7 @@ fn main() -> Result<(), ExitFailure> {
 
             Ok(run_init(shell)?)
         }
-        _ => Ok(())
+        _ => Ok(()),
     }
 }
 
@@ -83,7 +86,8 @@ fn run_add(path: &str) -> Result<(), Error> {
 
 fn run_jump(target: &str) -> Result<(), Error> {
     println!("Jumping to {}", target);
-
+    let index = Index::new()?;
+    let directory = index.search(target)?;
     Ok(())
 }
 

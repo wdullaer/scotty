@@ -5,11 +5,11 @@ use std::path::PathBuf;
 use std::{env, io};
 
 /// Models a supported shell. Will typically be instantiated from its string representation
-/// 
+///
 /// # Examples
 /// ```
 /// let shell = Shell::from("zsh");
-/// 
+///
 /// assert_eq!(shell, Shell::Zsh);
 /// ```
 #[derive(Debug, PartialEq)]
@@ -20,10 +20,11 @@ pub enum Shell {
 
 #[derive(Debug, Fail, PartialEq)]
 pub enum ShellError {
-    #[fail(display = "`{}` is not a supported shell string representation. Must be one of: [bash, zsh]", name)]
-    UnknownShellName {
-        name: String,
-    },
+    #[fail(
+        display = "`{}` is not a supported shell string representation. Must be one of: [bash, zsh]",
+        name
+    )]
+    UnknownShellName { name: String },
 }
 
 impl TryFrom<&str> for Shell {
@@ -33,10 +34,11 @@ impl TryFrom<&str> for Shell {
         match value.to_lowercase().trim() {
             "zsh" => Ok(Shell::Zsh),
             "bash" => Ok(Shell::Bash),
-            _ => Err(ShellError::UnknownShellName{name: value.to_owned()})
+            _ => Err(ShellError::UnknownShellName {
+                name: value.to_owned(),
+            }),
         }
     }
-
 }
 
 const ZSH_INIT: &str = include_str!("scotty.zsh");
@@ -97,7 +99,12 @@ mod tests {
         let input = "foo";
         let output = Shell::try_from(input);
 
-        assert_eq!(output, Err(ShellError::UnknownShellName{name: input.to_owned()}))
+        assert_eq!(
+            output,
+            Err(ShellError::UnknownShellName {
+                name: input.to_owned()
+            })
+        )
     }
 
     #[test]
