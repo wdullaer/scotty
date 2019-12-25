@@ -97,7 +97,7 @@ fn run_search(target: &str) -> Result<(), Error> {
             }
             Some(d) => d,
         };
-        if !directory.exists() {
+        if !directory.is_dir() {
             index.delete(&directory)?;
         } else {
             println!("{}", directory.display());

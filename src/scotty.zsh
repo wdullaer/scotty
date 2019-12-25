@@ -10,7 +10,6 @@ scotty_chpwd() {
 typeset -gaU chpwd_functions
 chpwd_functions+=(scotty_chpwd)
 
-# TODO: see if we can implement `cd` in scotty / rust itself
 s() {
     local output="$(__SCOTTY__ ${0})"
     if [[ -d "${output}" ]]; then

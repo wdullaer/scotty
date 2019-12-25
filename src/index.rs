@@ -39,17 +39,23 @@ impl Index {
 
     /// add adds a path to the database and update the indexes
     pub fn add(&self, path_buf: &PathBuf) -> Result<(), Error> {
-        if !path_buf.exists() {
+        if !path_buf.is_dir() {
             return Err(Error::from(io::Error::new(
                 io::ErrorKind::NotFound,
                 "Path does not exist",
+            )));
+        }
+        if !path_buf.is_absolute() {
+            return Err(Error::from(io::Error::new(
+                io::ErrorKind::Other,
+                "Path must be absolute",
             )));
         }
 
         // Check if the path is already known and update its last modified timestamp
         let path_string = path_buf.to_string_lossy();
         let path_bytes = path_string.as_bytes();
-        // TODO: see if we can use Instant and if bincode is the best way to handle this
+        
         let time_bytes = bincode::serialize(&SystemTime::now())?;
         match self.paths.insert(path_bytes, time_bytes)? {
             // New path: update the fst
