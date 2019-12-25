@@ -8,6 +8,7 @@ use clap::{App, AppSettings, Arg, SubCommand};
 use exitfailure::ExitFailure;
 use failure::Error;
 use std::convert::TryFrom;
+use std::io;
 use std::path::PathBuf;
 
 use crate::index::Index;
@@ -15,7 +16,6 @@ use crate::init::Shell;
 
 mod index;
 mod init;
-mod jump;
 
 fn main() -> Result<(), ExitFailure> {
     let path_arg = Arg::with_name("path")
@@ -44,8 +44,8 @@ fn main() -> Result<(), ExitFailure> {
                 .arg(&path_arg),
         )
         .subcommand(
-            SubCommand::with_name("jump")
-                .about("Jumps to a directory based on the input and the current index")
+            SubCommand::with_name("search")
+                .about("Searches a directory based on the input and the current index")
                 .arg(&target_arg),
         )
         .subcommand(
@@ -62,10 +62,10 @@ fn main() -> Result<(), ExitFailure> {
             // TODO: investigate the log crate for error handling
             Ok(run_add(path)?)
         }
-        ("jump", Some(sub_m)) => {
+        ("search", Some(sub_m)) => {
             let target = sub_m.value_of("target").expect("Target is missing");
 
-            Ok(run_jump(target)?)
+            Ok(run_search(target)?)
         }
         ("init", Some(sub_m)) => {
             let shell = sub_m.value_of("shell").expect("Shell is missing");
@@ -79,15 +79,31 @@ fn main() -> Result<(), ExitFailure> {
 fn run_add(path: &str) -> Result<(), Error> {
     println!("Adding {} to index", path);
     let path_buf = PathBuf::from(path);
-    let index = Index::new()?;
+    let index = Index::open()?;
     index.add(&path_buf)?;
     Ok(())
 }
 
-fn run_jump(target: &str) -> Result<(), Error> {
-    println!("Jumping to {}", target);
-    let index = Index::new()?;
-    let directory = index.search(target)?;
+fn run_search(target: &str) -> Result<(), Error> {
+    let index = Index::open()?;
+
+    loop {
+        let directory = match index.search(target)? {
+            None => {
+                return Err(Error::from(io::Error::new(
+                    io::ErrorKind::NotFound,
+                    "No results found",
+                )))
+            }
+            Some(d) => d,
+        };
+        if !directory.exists() {
+            index.delete(&directory)?;
+        } else {
+            println!("{}", directory.display());
+            break;
+        }
+    }
     Ok(())
 }
 

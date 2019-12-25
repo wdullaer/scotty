@@ -26,7 +26,7 @@ pub struct Index {
 
 impl Index {
     // TODO: make this take a config object
-    pub fn new() -> Result<Index, sled::Error> {
+    pub fn open() -> Result<Index, sled::Error> {
         // TODO: retrieve the path from config
         let db = Db::open("scotty.db")?;
         let main_tree = db.open_tree(MAIN_TREE)?;
@@ -53,7 +53,7 @@ impl Index {
         let time_bytes = bincode::serialize(&SystemTime::now())?;
         match self.paths.insert(path_bytes, time_bytes)? {
             // New path: update the fst
-            None => self.update_paths_index(path_bytes),
+            None => self.update_paths_index(path_bytes, merge_fst_sets),
             _ => Ok(()),
         }
     }
@@ -78,12 +78,20 @@ impl Index {
         Ok(best_score.map(|p| p.path.clone()))
     }
 
-    fn get_timestamp(&self, path: &Path) -> Result<Option<SystemTime>, Error> {
-        let time_bytes = &self.paths.get(path.to_string_lossy().as_bytes())?;
-        match time_bytes {
-            None => Ok(None),
-            Some(b) => Ok(bincode::deserialize(b)?),
+    pub fn delete(&self, path_buf: &PathBuf) -> Result<(), Error> {
+        let path_string = path_buf.to_string_lossy();
+        let path_bytes = path_string.as_bytes();
+        match self.paths.remove(path_bytes)? {
+            None => Ok(()),
+            Some(_) => self.update_paths_index(path_bytes, remove_fst_set),
         }
+    }
+
+    fn get_timestamp(&self, path: &Path) -> Result<Option<SystemTime>, Error> {
+        let time_bytes = self.paths.get(path.to_string_lossy().as_bytes())?;
+        Ok(time_bytes
+            .map(|x| bincode::deserialize::<SystemTime>(x.as_ref()))
+            .transpose()?)
     }
 
     // get_best_score consumes the vector and returns the item with the best score
@@ -109,8 +117,11 @@ impl Index {
         Ok(results.pop())
     }
 
-    // update_paths_index update the fts index with the new path
-    fn update_paths_index(&self, path_bytes: &[u8]) -> Result<(), Error> {
+    // update_paths_index updates the fts index with the new path using the passed in operation (merge or remove)
+    fn update_paths_index<F>(&self, path_bytes: &[u8], op: F) -> Result<(), Error>
+    where
+        F: Fn(&Set, &Set) -> fst::Result<Set>,
+    {
         let delta_fst = Set::from_iter(vec![path_bytes])?;
 
         let paths_fst = match self.main.get(INDEX_KEY)? {
@@ -118,7 +129,7 @@ impl Index {
             None => Set::default(),
         };
 
-        let new_fst = merge_fst_sets(&delta_fst, &paths_fst)?;
+        let new_fst = op(&delta_fst, &paths_fst)?;
 
         self.main.insert(INDEX_KEY, new_fst.as_fst().as_bytes())?;
         Ok(())
@@ -147,7 +158,15 @@ fn merge_fst_sets(delta_set: &Set, paths_set: &Set) -> fst::Result<Set> {
     paths_builder.into_inner().and_then(Set::from_bytes)
 }
 
-#[derive(Ord, PartialOrd, PartialEq, Eq)]
+fn remove_fst_set(delta_set: &Set, paths_set: &Set) -> fst::Result<Set> {
+    let stream = paths_set.op().add(delta_set.stream()).difference();
+
+    let mut paths_builder = SetBuilder::memory();
+    paths_builder.extend_stream(stream)?;
+    paths_builder.into_inner().and_then(Set::from_bytes)
+}
+
+#[derive(Ord, PartialOrd, PartialEq, Eq, Debug)]
 struct Score {
     score: i64,
     timestamp: Option<SystemTime>,
