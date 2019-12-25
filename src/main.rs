@@ -1,9 +1,3 @@
-#[macro_use]
-extern crate clap;
-extern crate exitfailure;
-#[macro_use]
-extern crate failure;
-
 use clap::{App, AppSettings, Arg, SubCommand};
 use exitfailure::ExitFailure;
 use failure::Error;
@@ -18,6 +12,7 @@ mod index;
 mod init;
 
 fn main() -> Result<(), ExitFailure> {
+    pretty_env_logger::init();
     let path_arg = Arg::with_name("path")
         .value_name("PATH")
         .help("The path to add into the index")
@@ -34,8 +29,8 @@ fn main() -> Result<(), ExitFailure> {
         .required(true);
 
     let matches = App::new("scotty")
-        .version(crate_version!())
-        .author(crate_authors!())
+        .version(clap::crate_version!())
+        .author(clap::crate_authors!())
         .about("Transports you into a directory based on previous usage")
         .setting(AppSettings::SubcommandRequiredElseHelp)
         .subcommand(
@@ -77,7 +72,7 @@ fn main() -> Result<(), ExitFailure> {
 }
 
 fn run_add(path: &str) -> Result<(), Error> {
-    println!("Adding {} to index", path);
+    log::debug!("Running add with path: {}", path);
     let path_buf = PathBuf::from(path);
     let index = Index::open()?;
     index.add(&path_buf)?;
@@ -85,6 +80,7 @@ fn run_add(path: &str) -> Result<(), Error> {
 }
 
 fn run_search(target: &str) -> Result<(), Error> {
+    log::debug!("Running search with target: {}", target);
     let index = Index::open()?;
 
     loop {
@@ -108,6 +104,7 @@ fn run_search(target: &str) -> Result<(), Error> {
 }
 
 fn run_init(target: &str) -> Result<(), Error> {
+    log::debug!("Running init with shell: {}", target);
     let shell = Shell::try_from(target)?;
     Ok(init::init_shell(shell)?)
 }

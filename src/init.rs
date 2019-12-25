@@ -1,5 +1,4 @@
-extern crate failure;
-
+use failure::Fail;
 use std::convert::TryFrom;
 use std::path::PathBuf;
 use std::{env, io};
@@ -52,6 +51,7 @@ pub fn init_shell(shell: Shell) -> io::Result<()> {
     };
 
     let scotty_path = env::current_exe()?;
+    log::debug!("Detected scotty_path: {}", scotty_path.display());
 
     print!("{}", interpolate_scotty_path(setup_script, &scotty_path));
 

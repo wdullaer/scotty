@@ -1,7 +1,3 @@
-extern crate failure;
-extern crate fst;
-extern crate sled;
-
 use std::convert::TryInto;
 use std::io;
 use std::ops::Deref;
@@ -28,6 +24,7 @@ impl Index {
     // TODO: make this take a config object
     pub fn open() -> Result<Index, sled::Error> {
         // TODO: retrieve the path from config
+        log::debug!("Opening db for config: scotty.db");
         let db = Db::open("scotty.db")?;
         let main_tree = db.open_tree(MAIN_TREE)?;
         let paths_tree = db.open_tree(PATHS_TREE)?;
@@ -39,6 +36,7 @@ impl Index {
 
     /// add adds a path to the database and update the indexes
     pub fn add(&self, path_buf: &PathBuf) -> Result<(), Error> {
+        log::debug!("Adding path to index: {}", path_buf.display());
         if !path_buf.is_dir() {
             return Err(Error::from(io::Error::new(
                 io::ErrorKind::NotFound,
@@ -55,7 +53,7 @@ impl Index {
         // Check if the path is already known and update its last modified timestamp
         let path_string = path_buf.to_string_lossy();
         let path_bytes = path_string.as_bytes();
-        
+
         let time_bytes = bincode::serialize(&SystemTime::now())?;
         match self.paths.insert(path_bytes, time_bytes)? {
             // New path: update the fst
@@ -65,6 +63,7 @@ impl Index {
     }
 
     pub fn search(&self, target: &str) -> Result<Option<PathBuf>, Error> {
+        log::debug!("Searching target in index: {}", target);
         // Get the index from the database
         let fst_index = match self.main.get(INDEX_KEY)? {
             Some(bytes) => Set::from_bytes(bytes.deref().try_into()?)?,
@@ -75,16 +74,20 @@ impl Index {
         let subseq = Subsequence::new(target);
         let stream = fst_index.search(subseq).into_stream();
         let results = stream.into_strs()?;
+        log::trace!("FST result set: {:?}", results);
 
         // Score the results
         let score_vec = score_results(&results, target);
+        log::trace!("Scored FST result set: {:?}", score_vec);
 
         let best_score = self.get_best_score(score_vec)?;
+        log::trace!("Best result: {:?}", best_score);
 
         Ok(best_score.map(|p| p.path.clone()))
     }
 
     pub fn delete(&self, path_buf: &PathBuf) -> Result<(), Error> {
+        log::debug!("Deleting path from index: {}", path_buf.display());
         let path_string = path_buf.to_string_lossy();
         let path_bytes = path_string.as_bytes();
         match self.paths.remove(path_bytes)? {
@@ -112,12 +115,14 @@ impl Index {
         results.sort();
         let max_score = results.last().unwrap().score;
 
-        // Get timestamp for ties
         results.retain(|x| x.score == max_score);
-        for score in results.iter_mut() {
-            score.timestamp = self.get_timestamp(&score.path)?;
+        // Get timestamp for ties
+        if results.len() > 1 {
+            for score in results.iter_mut() {
+                score.timestamp = self.get_timestamp(&score.path)?;
+            }
+            results.sort();
         }
-        results.sort();
 
         // Return best result
         Ok(results.pop())
@@ -128,6 +133,7 @@ impl Index {
     where
         F: Fn(&Set, &Set) -> fst::Result<Set>,
     {
+        log::debug!("Updating path index: {}", std::str::from_utf8(path_bytes).unwrap_or_default());
         let delta_fst = Set::from_iter(vec![path_bytes])?;
 
         let paths_fst = match self.main.get(INDEX_KEY)? {
@@ -157,6 +163,7 @@ fn score_results(results: &[String], target: &str) -> Vec<Score> {
 
 /// merge_fst_sets merges (creates a union) between two fst::Set and returns the result a newly allocated fst::Set
 fn merge_fst_sets(delta_set: &Set, paths_set: &Set) -> fst::Result<Set> {
+    log::debug!("Merging fst set");
     let stream = paths_set.op().add(delta_set.stream()).union();
 
     let mut paths_builder = SetBuilder::memory();
@@ -165,6 +172,7 @@ fn merge_fst_sets(delta_set: &Set, paths_set: &Set) -> fst::Result<Set> {
 }
 
 fn remove_fst_set(delta_set: &Set, paths_set: &Set) -> fst::Result<Set> {
+    log::debug!("Removing fst set");
     let stream = paths_set.op().add(delta_set.stream()).difference();
 
     let mut paths_builder = SetBuilder::memory();
