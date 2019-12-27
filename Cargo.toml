@@ -5,6 +5,8 @@ authors = ["Wouter Dullaert <wouter.dullaert@gmail.com>"]
 edition = "2018"
 license = "MPL-2.0"
 readme = "README.md"
+repository = "https://github.com/wdullaer/scotty"
+description = "Creates a book from markdown files"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
