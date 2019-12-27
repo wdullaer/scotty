@@ -2,10 +2,9 @@ use clap::{App, AppSettings, Arg, SubCommand};
 use exitfailure::ExitFailure;
 use failure::Error;
 use std::convert::TryFrom;
-use std::io;
 use std::path::PathBuf;
 
-use crate::index::Index;
+use crate::index::{Index, IndexError};
 use crate::init::Shell;
 
 mod index;
@@ -86,10 +85,9 @@ fn run_search(target: &str) -> Result<(), Error> {
     loop {
         let directory = match index.search(target)? {
             None => {
-                return Err(Error::from(io::Error::new(
-                    io::ErrorKind::NotFound,
-                    "No results found",
-                )))
+                return Err(Error::from(IndexError::NoResultsError {
+                    pattern: target.to_owned(),
+                }))
             }
             Some(d) => d,
         };

@@ -17,7 +17,7 @@ pub enum Shell {
     Bash, // Might remove this as I don't really know how the hooks work
 }
 
-#[derive(Debug, Fail, PartialEq)]
+#[derive(Debug, Fail, PartialEq, Eq)]
 pub enum ShellError {
     #[fail(
         display = "`{}` is not a supported shell string representation. Must be one of: [bash, zsh]",

@@ -1,10 +1,9 @@
 use std::convert::TryInto;
-use std::io;
 use std::ops::Deref;
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
-use failure::Error;
+use failure::{Error, Fail};
 use fst::automaton::Subsequence;
 use fst::{IntoStreamer, Set, SetBuilder};
 use fuzzy_matcher::skim::SkimMatcherV2;
@@ -14,6 +13,16 @@ use sled::{Db, Tree};
 const PATHS_TREE: &str = "paths";
 const MAIN_TREE: &str = "main";
 const INDEX_KEY: &str = "index";
+
+#[derive(Debug, Fail, PartialEq, Eq)]
+pub enum IndexError {
+    #[fail(display = "No path found for pattern `{}`", pattern)]
+    NoResultsError { pattern: String },
+    #[fail(display = "Path `{}` does not exist", path)]
+    PathDoesNotExistError { path: String },
+    #[fail(display = "Path `{}` is not absolute", path)]
+    RelativePathError { path: String },
+}
 
 pub struct Index {
     main: Tree,
@@ -38,16 +47,14 @@ impl Index {
     pub fn add(&self, path_buf: &PathBuf) -> Result<(), Error> {
         log::debug!("Adding path to index: {}", path_buf.display());
         if !path_buf.is_dir() {
-            return Err(Error::from(io::Error::new(
-                io::ErrorKind::NotFound,
-                "Path does not exist",
-            )));
+            return Err(Error::from(IndexError::PathDoesNotExistError {
+                path: path_buf.to_string_lossy().into_owned(),
+            }));
         }
         if !path_buf.is_absolute() {
-            return Err(Error::from(io::Error::new(
-                io::ErrorKind::Other,
-                "Path must be absolute",
-            )));
+            return Err(Error::from(IndexError::RelativePathError {
+                path: path_buf.to_string_lossy().into_owned(),
+            }));
         }
 
         // Check if the path is already known and update its last modified timestamp
@@ -133,7 +140,10 @@ impl Index {
     where
         F: Fn(&Set, &Set) -> fst::Result<Set>,
     {
-        log::debug!("Updating path index: {}", std::str::from_utf8(path_bytes).unwrap_or_default());
+        log::debug!(
+            "Updating path index: {}",
+            std::str::from_utf8(path_bytes).unwrap_or_default()
+        );
         let delta_fst = Set::from_iter(vec![path_bytes])?;
 
         let paths_fst = match self.main.get(INDEX_KEY)? {
