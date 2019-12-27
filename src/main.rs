@@ -7,6 +7,7 @@ use std::path::PathBuf;
 use crate::index::{Index, IndexError};
 use crate::init::Shell;
 
+mod config;
 mod index;
 mod init;
 
@@ -72,15 +73,15 @@ fn main() -> Result<(), ExitFailure> {
 
 fn run_add(path: &str) -> Result<(), Error> {
     log::debug!("Running add with path: {}", path);
+    let index = Index::open(config::get_index_config()?)?;
     let path_buf = PathBuf::from(path);
-    let index = Index::open()?;
     index.add(&path_buf)?;
     Ok(())
 }
 
 fn run_search(target: &str) -> Result<(), Error> {
     log::debug!("Running search with target: {}", target);
-    let index = Index::open()?;
+    let index = Index::open(config::get_index_config()?)?;
 
     loop {
         let directory = match index.search(target)? {

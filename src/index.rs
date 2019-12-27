@@ -8,7 +8,7 @@ use fst::automaton::Subsequence;
 use fst::{IntoStreamer, Set, SetBuilder};
 use fuzzy_matcher::skim::SkimMatcherV2;
 use fuzzy_matcher::FuzzyMatcher;
-use sled::{Db, Tree};
+use sled::{Config, Tree};
 
 const PATHS_TREE: &str = "paths";
 const MAIN_TREE: &str = "main";
@@ -22,6 +22,8 @@ pub enum IndexError {
     PathDoesNotExistError { path: String },
     #[fail(display = "Path `{}` is not absolute", path)]
     RelativePathError { path: String },
+    #[fail(display = "Could determine writable location for index data")]
+    BadDataDirectoryError,
 }
 
 pub struct Index {
@@ -30,11 +32,11 @@ pub struct Index {
 }
 
 impl Index {
-    // TODO: make this take a config object
-    pub fn open() -> Result<Index, sled::Error> {
-        // TODO: retrieve the path from config
-        log::debug!("Opening db for config: scotty.db");
-        let db = Db::open("scotty.db")?;
+    /// open opens and configures a new sled database based on the provided
+    /// config
+    pub fn open(config: Config) -> Result<Index, sled::Error> {
+        log::debug!("Opening db for config: {:?}", config);
+        let db = config.open()?;
         let main_tree = db.open_tree(MAIN_TREE)?;
         let paths_tree = db.open_tree(PATHS_TREE)?;
         Ok(Index {
