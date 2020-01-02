@@ -10,7 +10,7 @@ use std::time::SystemTime;
 use failure::{Error, Fail};
 use fst::automaton::Subsequence;
 use fst::{IntoStreamer, Set, SetBuilder};
-use fuzzy_matcher::skim::SkimMatcherV2;
+use fuzzy_matcher::clangd::ClangdMatcher;
 use fuzzy_matcher::FuzzyMatcher;
 use sled::{Config, Tree};
 
@@ -183,7 +183,7 @@ impl Index {
 
 /// score_results computes the fuzzy matching score of each result against the target string
 fn score_results(results: &[String], target: &str) -> Vec<Score> {
-    let scorer = SkimMatcherV2::default();
+    let scorer = ClangdMatcher::default();
     results
         .iter()
         .map(|item| Score {
