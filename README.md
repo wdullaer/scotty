@@ -24,7 +24,7 @@ TODO: insert a demo gif
    Add the following to the end of your `~/.zshrc` file
 
    ```sh
-   source "$(scotty init zsh)"
+   source <(scotty init zsh)
    ```
 
 ## Inspiration
@@ -32,7 +32,7 @@ The following projects have been an inspiration for various components in this p
 * [Autojump](https://github.com/wting/autojump): Provides similar functionality, implemented in python
 * [Starship](https://starship.rs): A shell prompt implemented in rust
 * [Meilisearch](https://www.meilisearch.com/): A full text search server implemented in rust
-* [SublimeText Fuzzy Match](https://www.forrestthewoods.com/blog/reverse_engineering_sublime_texts_fuzzy_match/#.d05n81yjy): A reverse engineering of Sublime Text's fuzzy match on files and directories
+* [SublimeText Fuzzy Match](https://www.forrestthewoods.com/blog/reverse_engineering_sublime_texts_fuzzy_match/): A reverse engineering of Sublime Text's fuzzy match on files and directories
 
 ## License
 All the code in this repository is released under the _Mozilla Public License v2.0_, for more information take a look at the [LICENSE](LICENSE) file.
