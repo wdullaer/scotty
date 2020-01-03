@@ -18,7 +18,7 @@ use std::{env, io};
 #[derive(Debug, PartialEq)]
 pub enum Shell {
     Zsh,
-    Bash, // Might remove this as I don't really know how the hooks work
+    Bash,
 }
 
 #[derive(Debug, Fail, PartialEq, Eq)]

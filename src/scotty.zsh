@@ -20,7 +20,6 @@ s() {
         fi
         cd "${output}"
     else
-        echo "scotty: directory ${output} not found"
         false
     fi
 }

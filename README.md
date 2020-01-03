@@ -27,6 +27,13 @@ TODO: insert a demo gif
    source <(scotty init zsh)
    ```
 
+   #### Bash
+   Add the following to the end of your `~/.bashrc` file
+
+   ```sh
+   source <(scotty init bash)
+   ```
+
 ## Inspiration
 The following projects have been an inspiration for various components in this project:
 * [Autojump](https://github.com/wting/autojump): Provides similar functionality, implemented in python
