@@ -225,7 +225,7 @@ struct Score {
 mod tests {
     use super::*;
     use std::fs::File;
-    use tempfile::{tempdir};
+    use tempfile::tempdir;
 
     #[test]
     fn merge_fst_sets_both_empty() {
@@ -477,7 +477,10 @@ mod tests {
 
         index.add(&path_buf).unwrap();
 
-        assert_eq!(index.search(pattern).unwrap(), Some(PathBuf::from(path_buf)));
+        assert_eq!(
+            index.search(pattern).unwrap(),
+            Some(PathBuf::from(path_buf))
+        );
 
         indexed_dir.close().unwrap()
     }
@@ -588,7 +591,7 @@ mod tests {
         for score in input.iter() {
             index.add(&score.path).unwrap();
         }
-        let expected = Score{
+        let expected = Score {
             path: input[1].path.clone(),
             score: input[1].score.clone(),
             timestamp: None,
