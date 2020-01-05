@@ -102,7 +102,7 @@ impl Index {
         let best_score = self.get_best_score(score_vec)?;
         log::trace!("Best result: {:?}", best_score);
 
-        Ok(best_score.map(|p| p.path.clone()))
+        Ok(best_score.map(|p| p.path))
     }
 
     /// delete removes a path from the index, will succeed even if the path is not indexed
@@ -352,7 +352,7 @@ mod tests {
         let index = get_temporary_index();
         let input_dir = tempdir().unwrap();
         let input = input_dir.path();
-        assert_eq!(index.add(input).unwrap(), ());
+        assert!(index.add(input).is_ok());
         assert!(index.has_path(input));
         input_dir.close().unwrap();
     }
@@ -406,7 +406,7 @@ mod tests {
         let index = get_temporary_index();
         let input_dir = tempdir().unwrap();
         let input = input_dir.path().join("..");
-        assert_eq!(index.add(&input).unwrap(), ());
+        assert!(index.add(&input).is_ok());
         assert!(index.has_path(&input));
         input_dir.close().unwrap()
     }
@@ -417,7 +417,7 @@ mod tests {
 
         let input = PathBuf::from("foo");
 
-        assert_eq!(index.delete(&input).unwrap(), ());
+        assert!(index.delete(&input).is_ok());
         assert!(!index.has_path(&input))
     }
 
@@ -429,7 +429,7 @@ mod tests {
 
         index.add(&input).unwrap();
 
-        assert_eq!(index.delete(&input).unwrap(), ());
+        assert!(index.delete(&input).is_ok());
         assert!(!index.has_path(&input));
         input_dir.close().unwrap()
     }
@@ -446,7 +446,7 @@ mod tests {
         index.add(&path1).unwrap();
         index.add(&path2).unwrap();
 
-        assert_eq!(index.delete(&input).unwrap(), ());
+        assert!(index.delete(&input).is_ok());
         assert!(!index.has_path(&input));
 
         input_dir_1.close().unwrap();
@@ -593,7 +593,7 @@ mod tests {
         }
         let expected = Score {
             path: input[1].path.clone(),
-            score: input[1].score.clone(),
+            score: input[1].score,
             timestamp: None,
         };
 
@@ -632,7 +632,7 @@ mod tests {
         index.add(&input.first().unwrap().path).unwrap();
         let expected = Score {
             path: input[0].path.clone(),
-            score: input[0].score.clone(),
+            score: input[0].score,
             timestamp: None,
         };
 
