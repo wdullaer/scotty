@@ -1,7 +1,7 @@
 # Scotty
 Scotty uses full text search techniques to rapidly go to directories in your shell that you have visited previously. It is implemented in rust, because I wanted to learn the language, but also to minize any latency so that your shell remains snappy.
 
-TODO: insert a demo gif
+[![asciicast](https://asciinema.org/a/BmxfCm6RNf4iCX1hhuzYKZPzf.svg)](https://asciinema.org/a/BmxfCm6RNf4iCX1hhuzYKZPzf)
 
 ## Installation
 `scotty` can be installed in a few different ways. More will be added in the future if it gains any traction.
