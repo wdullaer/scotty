@@ -26,7 +26,7 @@ pub enum IndexError {
     PathDoesNotExistError { path: String },
     #[fail(display = "Path `{}` is not absolute", path)]
     RelativePathError { path: String },
-    #[fail(display = "Could determine writable location for index data")]
+    #[fail(display = "Could not determine writable location for index data")]
     BadDataDirectoryError,
 }
 
@@ -36,8 +36,7 @@ pub struct Index {
 }
 
 impl Index {
-    /// open opens and configures a new sled database based on the provided
-    /// config
+    /// Opens and configures a new sled database with config
     pub fn open(config: Config) -> Result<Index, sled::Error> {
         log::debug!("Opening db for config: {:?}", config);
         let db = config.open()?;
@@ -49,22 +48,22 @@ impl Index {
         })
     }
 
-    /// add adds a path to the database and update the indexes
+    /// Adds a path to the database and update the indexes
     pub fn add(&self, path_buf: &Path) -> Result<(), Error> {
         log::debug!("Adding path to index: {}", path_buf.display());
+        let path_string = path_buf.to_string_lossy();
         if !path_buf.is_dir() {
             return Err(Error::from(IndexError::PathDoesNotExistError {
-                path: path_buf.to_string_lossy().into_owned(),
+                path: path_string.into_owned(),
             }));
         }
         if !path_buf.is_absolute() {
             return Err(Error::from(IndexError::RelativePathError {
-                path: path_buf.to_string_lossy().into_owned(),
+                path: path_string.into_owned(),
             }));
         }
 
         // Check if the path is already known and update its last modified timestamp
-        let path_string = path_buf.to_string_lossy();
         let path_bytes = path_string.as_bytes();
 
         let time_bytes = bincode::serialize(&SystemTime::now())?;
@@ -75,7 +74,8 @@ impl Index {
         }
     }
 
-    /// search queries the current full-text index and returns the best result, using the latest visited timestamp as a tie-breaker
+    /// Returns the best directory path from the index for the given 'target' string,
+    // uses last-visited timestamp as a tie-breaker for equally scored paths.
     pub fn search(&self, target: &str) -> Result<Option<PathBuf>, Error> {
         log::debug!("Searching target in index: {}", target);
         // Special case an empty target
@@ -105,7 +105,7 @@ impl Index {
         Ok(best_score.map(|p| p.path))
     }
 
-    /// delete removes a path from the index, will succeed even if the path is not indexed
+    /// Removes a path from the index, will succeed even if the path is not indexed
     pub fn delete(&self, path_buf: &Path) -> Result<(), Error> {
         log::debug!("Deleting path from index: {}", path_buf.display());
         let path_string = path_buf.to_string_lossy();
@@ -123,7 +123,7 @@ impl Index {
             .transpose()?)
     }
 
-    // get_best_score consumes the vector and returns the item with the best score
+    // Consumes the vector and returns the item with the best score
     // It will use the timestamp stored in the database as a tie-breaker
     // Care is taken to minimize the amount of database lookups
     fn get_best_score(&self, mut results: Vec<Score>) -> Result<Option<Score>, Error> {
@@ -148,7 +148,7 @@ impl Index {
         Ok(results.pop())
     }
 
-    // update_paths_index updates the fts index with the new path using the passed in operation (merge or remove)
+    // Updates the fts index with the new path using the passed in operation (merge or remove)
     fn update_paths_index<F>(&self, path_bytes: &[u8], op: F) -> Result<(), Error>
     where
         F: Fn(&Set, &Set) -> fst::Result<Set>,
@@ -171,7 +171,7 @@ impl Index {
     }
 
     #[cfg(test)]
-    /// has_path is a helper function for use in testing that checks if
+    /// Helper function for use in testing that checks if
     /// a particular path has been added to the index
     fn has_path(&self, path_buf: &Path) -> bool {
         match self.paths.get(path_buf.to_string_lossy().as_bytes()) {
@@ -181,7 +181,7 @@ impl Index {
     }
 }
 
-/// score_results computes the fuzzy matching score of each result against the target string
+/// Computes the fuzzy matching score of each result against the target string
 fn score_results(results: &[String], target: &str) -> Vec<Score> {
     let scorer = ClangdMatcher::default();
     results
@@ -194,7 +194,7 @@ fn score_results(results: &[String], target: &str) -> Vec<Score> {
         .collect::<Vec<_>>()
 }
 
-/// merge_fst_sets merges (creates a union) between two fst::Set and returns the result as a newly allocated fst::Set
+/// Merges (creates a union) between two fst::Set and returns the result as a newly allocated fst::Set
 fn merge_fst_sets(paths_set: &Set, delta_set: &Set) -> fst::Result<Set> {
     log::debug!("Merging fst set");
     let stream = paths_set.op().add(delta_set.stream()).union();
@@ -204,7 +204,7 @@ fn merge_fst_sets(paths_set: &Set, delta_set: &Set) -> fst::Result<Set> {
     paths_builder.into_inner().and_then(Set::from_bytes)
 }
 
-/// remove_fst_sets removes the second fst::Set from the first and returns the result as a newly allocated fst::Set
+/// Removes the second fst::Set from the first and returns the result as a newly allocated fst::Set
 fn remove_fst_set(paths_set: &Set, delta_set: &Set) -> fst::Result<Set> {
     log::debug!("Removing fst set");
     let stream = paths_set.op().add(delta_set.stream()).difference();

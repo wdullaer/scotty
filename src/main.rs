@@ -49,7 +49,7 @@ fn main() -> Result<(), ExitFailure> {
         )
         .subcommand(
             SubCommand::with_name("init")
-                .about("Initegrates scotty in your shell")
+                .about("Integrates scotty in your shell")
                 .arg(&shell_arg),
         )
         .get_matches();

@@ -6,7 +6,7 @@ use directories::ProjectDirs;
 
 use crate::index::IndexError;
 
-/// get_index_config constructs a sled config that will write the db to
+/// Constructs a sled config that will write the db to
 /// the data directory for this application based on host OS standards
 /// It will return an error if no data directory can be determined (we
 /// might make this location configurable in the future)
