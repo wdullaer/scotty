@@ -3,11 +3,11 @@ on:
   push:
     paths-ignore:
       - "**.md"
-      - "docs/"
+      - "docs/**"
   pull_request:
     paths-ignore:
       - "**.md"
-      - "docs/"
+      - "docs/**"
 
 jobs:
   lint:
