@@ -93,14 +93,14 @@ impl Index {
         let subseq = Subsequence::new(target);
         let stream = fst_index.search(subseq).into_stream();
         let results = stream.into_strs()?;
-        log::trace!("FST result set: {:?}", results);
+        log::debug!("FST result set: {:?}", results);
 
         // Score the results
         let score_vec = score_results(&results, target);
-        log::trace!("Scored FST result set: {:?}", score_vec);
+        log::debug!("Scored FST result set: {:?}", score_vec);
 
         let best_score = self.get_best_score(score_vec)?;
-        log::trace!("Best result: {:?}", best_score);
+        log::debug!("Best result: {:?}", best_score);
 
         Ok(best_score.map(|p| p.path))
     }
