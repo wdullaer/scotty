@@ -5,6 +5,7 @@
 use std::convert::TryInto;
 use std::ops::Deref;
 use std::path::{Path, PathBuf};
+use std::str;
 use std::time::SystemTime;
 
 use failure::{Error, Fail};
@@ -12,6 +13,7 @@ use fst::automaton::Subsequence;
 use fst::{IntoStreamer, Set, SetBuilder};
 use fuzzy_matcher::clangd::ClangdMatcher;
 use fuzzy_matcher::FuzzyMatcher;
+use serde::Serialize;
 use sled::{Config, Tree};
 
 const PATHS_TREE: &str = "paths";
@@ -35,6 +37,12 @@ pub struct Index {
     paths: Tree,
 }
 
+#[derive(Serialize, Debug, Eq, Ord, PartialEq, PartialOrd)]
+pub struct PathIndexEntry {
+    pub timestamp: SystemTime,
+    pub path: PathBuf,
+}
+
 impl Index {
     /// Opens and configures a new sled database with config
     pub fn open(config: Config) -> Result<Index, sled::Error> {
@@ -46,6 +54,19 @@ impl Index {
             main: main_tree,
             paths: paths_tree,
         })
+    }
+
+    /// Produces a Vec that contains all current entries in the index
+    pub fn list(&self) -> Result<Vec<PathIndexEntry>, Error> {
+        self.paths
+            .iter()
+            .map(|item| {
+                let tuple = item?;
+                let path = PathBuf::from(str::from_utf8(tuple.0.as_ref())?);
+                let timestamp = bincode::deserialize(tuple.1.as_ref())?;
+                Ok(PathIndexEntry { path, timestamp })
+            })
+            .collect()
     }
 
     /// Adds a path to the database and update the indexes
@@ -511,6 +532,38 @@ mod tests {
         assert!(index.search(pattern).unwrap().is_none());
 
         indexed_dir.close().unwrap()
+    }
+
+    #[test]
+    fn index_list_empty() {
+        let index = get_temporary_index();
+
+        let list = index.list().unwrap();
+
+        assert!(list.is_empty());
+    }
+
+    #[test]
+    fn index_list_not_empty() {
+        let index = get_temporary_index();
+
+        let input_dir_1 = tempdir().unwrap();
+        let input_dir_2 = tempdir().unwrap();
+        let path1 = input_dir_1.path();
+        let path2 = input_dir_2.path();
+
+        index.add(&path1).unwrap();
+        index.add(&path2).unwrap();
+
+        let mut list = index.list().unwrap();
+        list.sort();
+
+        // This works because we ensured the IndexEntries are sorted by timestamp first
+        assert_eq!(list[0].path, path1);
+        assert_eq!(list[1].path, path2);
+
+        input_dir_1.close().unwrap();
+        input_dir_2.close().unwrap()
     }
 
     #[test]

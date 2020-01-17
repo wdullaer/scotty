@@ -14,6 +14,7 @@ use crate::init::Shell;
 mod config;
 mod index;
 mod init;
+mod printer;
 
 fn main() -> Result<(), ExitFailure> {
     pretty_env_logger::init();
@@ -31,6 +32,10 @@ fn main() -> Result<(), ExitFailure> {
         .value_name("SHELL")
         .help("The shell scotty needs to integrate with")
         .required(true);
+
+    let json_arg = Arg::with_name("json")
+        .long("json")
+        .help("Print output as a series of newline delimited json objects");
 
     let matches = App::new("scotty")
         .version(clap::crate_version!())
@@ -52,13 +57,17 @@ fn main() -> Result<(), ExitFailure> {
                 .about("Integrates scotty in your shell")
                 .arg(&shell_arg),
         )
+        .subcommand(
+            SubCommand::with_name("list")
+                .about("Print the current index")
+                .arg(&json_arg),
+        )
         .get_matches();
 
     match matches.subcommand() {
         ("add", Some(sub_m)) => {
             let path = sub_m.value_of("path").expect("Path is missing");
 
-            // TODO: investigate the log crate for error handling
             Ok(run_add(path)?)
         }
         ("search", Some(sub_m)) => {
@@ -70,6 +79,11 @@ fn main() -> Result<(), ExitFailure> {
             let shell = sub_m.value_of("shell").expect("Shell is missing");
 
             Ok(run_init(shell)?)
+        }
+        ("list", Some(sub_m)) => {
+            let is_json = sub_m.is_present("json");
+
+            Ok(run_list(is_json)?)
         }
         _ => Ok(()),
     }
@@ -104,6 +118,16 @@ fn run_search(target: &str) -> Result<(), Error> {
         }
     }
     Ok(())
+}
+
+fn run_list(is_json: bool) -> Result<(), Error> {
+    log::debug!("Running list with raw output: {}", is_json);
+    let index = Index::open(config::get_index_config()?)?;
+    if is_json {
+        printer::print_json(&index.list()?)
+    } else {
+        printer::print_human(&index.list()?)
+    }
 }
 
 fn run_init(target: &str) -> Result<(), Error> {
