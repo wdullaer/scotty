@@ -206,6 +206,16 @@ jobs:
       - name: Generate checksums
         run: for file in scotty-*; do openssl dgst -sha256 -r "$file" | awk '{print $1}' > "${file}.sha256"; done
 
+      - name: Install go (needed for changelog tool)
+        uses: actions/setup-go@v1
+        with:
+          go-version: 1.13
+      - name: Generate changelog
+        run: |
+          export PATH=${PATH}:$(go env GOPATH)/bin
+          go get -u github.com/git-chglog/git-chglog/cmd/git-chglog
+          git-chglog -c .github/chglog/config.yml $(git describe --tags) > CHANGELOG.md
+
       - name: Create GitHub release ${{ matrix.target }}
         uses: softprops/action-gh-release@v1
         with:
@@ -218,5 +228,6 @@ jobs:
             scotty-x86_64-apple-darwin.tar.gz.sha256
             scotty-x86_64-pc-windows-msvc.zip
             scotty-x86_64-pc-windows-msvc.zip.sha256
+          body_path: CHANGELOG.md
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
