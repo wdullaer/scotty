@@ -12,7 +12,7 @@ on:
 jobs:
   commit-msg:
     # Commitsar has nothing to check when run directly on master
-    if: github.ref != 'master'
+    if: github.ref != 'refs/heads/master'
     name: Commit Linter
     runs-on: ubuntu-latest
     steps:
