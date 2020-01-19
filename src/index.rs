@@ -511,7 +511,7 @@ mod tests {
         let index = get_temporary_index();
         let indexed_dir = tempdir().unwrap();
         let path_buf = indexed_dir.path();
-        let pattern = "foo";
+        let pattern = "#!";
 
         index.add(&path_buf).unwrap();
 
