@@ -10,13 +10,20 @@ on:
       - "docs/**"
 
 jobs:
-  lint:
-    name: Formatter & Linter
+  commit-msg:
+    # Commitsar has nothing to check when run directly on master
+    if: github.ref != 'master'
+    name: Commit Linter
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
       - name: Check commit message format (necessary to generate release changelogs)
         uses: docker://commitsar/commitsar:latest
+  lint:
+    name: Formatter & Linter
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
