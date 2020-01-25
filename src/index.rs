@@ -3,6 +3,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 use std::convert::TryInto;
+use std::fs;
 use std::ops::Deref;
 use std::path::{Path, PathBuf};
 use std::str;
@@ -45,9 +46,35 @@ pub struct PathIndexEntry {
 
 impl Index {
     /// Opens and configures a new sled database with config
-    pub fn open(config: Config) -> Result<Index, sled::Error> {
+    pub fn open(config: Config) -> Result<Index, Error> {
         log::debug!("Opening db for config: {:?}", config);
-        let db = config.open()?;
+        let db = match config.open() {
+            // versions 0.1.0 and 0.2.0 used an older version of sled which has
+            // a different serialization format
+            // Current versions can't open this. We are chosing to handle this by
+            // just removing the old database and trying to open again.
+            // This is of course distructive, but given that we're still very early
+            // on in this project, we should be able to get away with it.
+            // The other alternatives are:
+            //    * Ask the user to reset the database himself. This is useless
+            //      without also implementing import/export functionality to a stable
+            //      serialization. The kind of data and the limited amount of user
+            //      don't justify this effort at this point
+            //    * Compile in the old version of sled as well and use its built-in
+            //      import/export functionality. We'd have to drag this dependency
+            //      with us for a long time. Like for the previous option, the limited
+            //      userbase probably doesn't justify creating this kind of technical
+            //      debt right now
+            // In any case: let's hope the sled serialization format remains stable
+            // for the foreseeable future
+            Err(sled::Error::Unsupported(_)) => {
+                println! {"Found incompatible database. Recreating."}
+                fs::remove_dir_all(&config.path)?;
+                config.open()?
+            }
+            Err(e) => return Err(Error::from(e)),
+            Ok(db) => db,
+        };
         let main_tree = db.open_tree(MAIN_TREE)?;
         let paths_tree = db.open_tree(PATHS_TREE)?;
         Ok(Index {
