@@ -6,7 +6,8 @@ use clap::{App, AppSettings, Arg, SubCommand};
 use exitfailure::ExitFailure;
 use failure::Error;
 use std::convert::TryFrom;
-use std::path::PathBuf;
+use std::ffi::OsStr;
+use std::path::{Path, PathBuf};
 
 use crate::index::{Index, IndexError};
 use crate::init::Shell;
@@ -27,6 +28,13 @@ fn main() -> Result<(), ExitFailure> {
         .value_name("TARGET")
         .help("The target to jump to")
         .required(true);
+
+    let exclude_arg = Arg::with_name("exclude")
+        .value_name("PATH")
+        .long("exclude")
+        .short("e")
+        .number_of_values(1)
+        .help("Exclude the given path from the search results");
 
     let shell_arg = Arg::with_name("shell")
         .value_name("SHELL")
@@ -50,6 +58,7 @@ fn main() -> Result<(), ExitFailure> {
         .subcommand(
             SubCommand::with_name("search")
                 .about("Searches a directory based on the input and the current index")
+                .arg(&exclude_arg)
                 .arg(&target_arg),
         )
         .subcommand(
@@ -66,17 +75,18 @@ fn main() -> Result<(), ExitFailure> {
 
     match matches.subcommand() {
         ("add", Some(sub_m)) => {
-            let path = sub_m.value_of("path").expect("Path is missing");
+            let path = sub_m.value_of_os("path").expect("Path is missing");
 
             Ok(run_add(path)?)
         }
         ("search", Some(sub_m)) => {
             let target = sub_m.value_of("target").expect("Target is missing");
+            let excluded_path = sub_m.value_of_os("exclude").map(|value| Path::new(value));
 
-            Ok(run_search(target)?)
+            Ok(run_search(target, excluded_path)?)
         }
         ("init", Some(sub_m)) => {
-            let shell = sub_m.value_of("shell").expect("Shell is missing");
+            let shell = sub_m.value_of_os("shell").expect("Shell is missing");
 
             Ok(run_init(shell)?)
         }
@@ -89,20 +99,21 @@ fn main() -> Result<(), ExitFailure> {
     }
 }
 
-fn run_add(path: &str) -> Result<(), Error> {
-    log::debug!("Running add with path: {}", path);
+fn run_add(path: &OsStr) -> Result<(), Error> {
+    log::debug!("Running add with path: {}", path.to_string_lossy());
     let index = Index::open(config::get_index_config()?)?;
     let path_buf = PathBuf::from(path);
     index.add(&path_buf)?;
     Ok(())
 }
 
-fn run_search(target: &str) -> Result<(), Error> {
+fn run_search(target: &str, exclude: Option<&Path>) -> Result<(), Error> {
     log::debug!("Running search with target: {}", target);
+
     let index = Index::open(config::get_index_config()?)?;
 
     loop {
-        let directory = match index.search(target)? {
+        let directory = match index.search(target, exclude)? {
             None => {
                 return Err(Error::from(IndexError::NoResultsError {
                     pattern: target.to_owned(),
@@ -130,8 +141,8 @@ fn run_list(is_json: bool) -> Result<(), Error> {
     }
 }
 
-fn run_init(target: &str) -> Result<(), Error> {
-    log::debug!("Running init with shell: {}", target);
+fn run_init(target: &OsStr) -> Result<(), Error> {
+    log::debug!("Running init with shell: {}", target.to_string_lossy());
     let shell = Shell::try_from(target)?;
     Ok(init::init_shell(shell)?)
 }

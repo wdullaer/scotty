@@ -4,6 +4,7 @@
 
 use failure::Fail;
 use std::convert::TryFrom;
+use std::ffi::OsStr;
 use std::path::PathBuf;
 use std::{env, io};
 
@@ -41,6 +42,14 @@ impl TryFrom<&str> for Shell {
                 name: value.to_owned(),
             }),
         }
+    }
+}
+
+impl TryFrom<&OsStr> for Shell {
+    type Error = ShellError;
+
+    fn try_from(value: &OsStr) -> Result<Self, Self::Error> {
+        Shell::try_from(value.to_string_lossy().as_ref())
     }
 }
 

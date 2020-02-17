@@ -10,8 +10,8 @@ use std::str;
 use std::time::SystemTime;
 
 use failure::{Error, Fail};
-use fst::automaton::Subsequence;
-use fst::{IntoStreamer, Set, SetBuilder};
+use fst::automaton;
+use fst::{Automaton, IntoStreamer, Set, SetBuilder};
 use fuzzy_matcher::clangd::ClangdMatcher;
 use fuzzy_matcher::FuzzyMatcher;
 use serde::Serialize;
@@ -124,7 +124,7 @@ impl Index {
 
     /// Returns the best directory path from the index for the given 'target' string,
     // uses last-visited timestamp as a tie-breaker for equally scored paths.
-    pub fn search(&self, target: &str) -> Result<Option<PathBuf>, Error> {
+    pub fn search(&self, target: &str, exclude: Option<&Path>) -> Result<Option<PathBuf>, Error> {
         log::debug!("Searching target in index: {}", target);
         // Special case an empty target
         if target.is_empty() {
@@ -138,9 +138,24 @@ impl Index {
         };
 
         // Create the query automaton and run it
-        let subseq = Subsequence::new(target);
-        let stream = fst_index.search(subseq).into_stream();
-        let results = stream.into_strs()?;
+        let subseq = automaton::Subsequence::new(target);
+        let results = match exclude {
+            Some(p) => {
+                let path_str = p.to_string_lossy();
+                let filter = automaton::Str::new(path_str.as_ref()).complement();
+                fst_index
+                    .search(subseq.intersection(filter))
+                    .into_stream()
+                    .into_strs()?
+            }
+            // A more elegant way would seem to use automaton::AlwaysMatch, but I just can't
+            // find a way to make that typecheck (since operations on an Automaton don't return
+            // an Automaton but types of the form Union<S,T>)
+            // This is also why we only support one exclude string: a vec of exclude strings would
+            // result in a type sig of Union<Union<...,_>> that can't be known at compile time
+            None => fst_index.search(subseq).into_stream().into_strs()?,
+        };
+
         log::debug!("FST result set: {:?}", results);
 
         // Score the results
@@ -506,14 +521,14 @@ mod tests {
         let index = get_temporary_index();
         let pattern = "abcd";
 
-        assert!(index.search(pattern).unwrap().is_none())
+        assert!(index.search(pattern, None).unwrap().is_none())
     }
     #[test]
     fn index_search_empty_index_empty_pattern() {
         let index = get_temporary_index();
         let pattern = "";
 
-        assert!(index.search(pattern).unwrap().is_none())
+        assert!(index.search(pattern, None).unwrap().is_none())
     }
 
     #[test]
@@ -526,7 +541,7 @@ mod tests {
         index.add(&path_buf).unwrap();
 
         assert_eq!(
-            index.search(pattern).unwrap(),
+            index.search(pattern, None).unwrap(),
             Some(PathBuf::from(path_buf))
         );
 
@@ -542,7 +557,7 @@ mod tests {
 
         index.add(&path_buf).unwrap();
 
-        assert!(index.search(pattern).unwrap().is_none());
+        assert!(index.search(pattern, None).unwrap().is_none());
 
         indexed_dir.close().unwrap()
     }
@@ -556,7 +571,21 @@ mod tests {
 
         index.add(&path_buf).unwrap();
 
-        assert!(index.search(pattern).unwrap().is_none());
+        assert!(index.search(pattern, None).unwrap().is_none());
+
+        indexed_dir.close().unwrap()
+    }
+
+    #[test]
+    fn index_search_non_empty_index_found_excluded() {
+        let index = get_temporary_index();
+        let indexed_dir = tempdir().unwrap();
+        let path_buf = indexed_dir.path();
+        let pattern = path_buf.file_name().unwrap().to_str().unwrap();
+
+        index.add(&path_buf).unwrap();
+
+        assert!(index.search(pattern, Some(&path_buf)).unwrap().is_none());
 
         indexed_dir.close().unwrap()
     }
