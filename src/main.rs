@@ -36,6 +36,11 @@ fn main() -> Result<(), ExitFailure> {
         .number_of_values(1)
         .help("Exclude the given path from the search results");
 
+    let all_arg = Arg::with_name("all")
+        .long("all")
+        .short("a")
+        .help("Return all matched entries instead of only the most relevant one");
+
     let shell_arg = Arg::with_name("shell")
         .value_name("SHELL")
         .help("The shell scotty needs to integrate with")
@@ -59,6 +64,7 @@ fn main() -> Result<(), ExitFailure> {
             SubCommand::with_name("search")
                 .about("Searches a directory based on the input and the current index")
                 .arg(&exclude_arg)
+                .arg(&all_arg)
                 .arg(&target_arg),
         )
         .subcommand(
@@ -82,8 +88,9 @@ fn main() -> Result<(), ExitFailure> {
         ("search", Some(sub_m)) => {
             let target = sub_m.value_of("target").expect("Target is missing");
             let excluded_path = sub_m.value_of_os("exclude").map(|value| Path::new(value));
+            let find_all = sub_m.is_present("all");
 
-            Ok(run_search(target, excluded_path)?)
+            Ok(run_search(target, excluded_path, find_all)?)
         }
         ("init", Some(sub_m)) => {
             let shell = sub_m.value_of_os("shell").expect("Shell is missing");
@@ -107,13 +114,19 @@ fn run_add(path: &OsStr) -> Result<(), Error> {
     Ok(())
 }
 
-fn run_search(target: &str, exclude: Option<&Path>) -> Result<(), Error> {
+fn run_search(target: &str, exclude: Option<&Path>, find_all: bool) -> Result<(), Error> {
     log::debug!("Running search with target: {}", target);
 
     let index = Index::open(config::get_index_config()?)?;
 
+    if find_all {
+        return Ok(printer::print_path_slice(
+            &index.find_all(target, exclude)?,
+        )?);
+    }
+
     loop {
-        let directory = match index.search(target, exclude)? {
+        let directory = match index.find_one(target, exclude)? {
             None => {
                 return Err(Error::from(IndexError::NoResultsError {
                     pattern: target.to_owned(),

@@ -122,13 +122,13 @@ impl Index {
         }
     }
 
-    /// Returns the best directory path from the index for the given 'target' string,
-    // uses last-visited timestamp as a tie-breaker for equally scored paths.
-    pub fn search(&self, target: &str, exclude: Option<&Path>) -> Result<Option<PathBuf>, Error> {
+    /// Returns a vec with all strings from the index that match the 'target' string
+    /// This is the internal implemenation backing find_one and find_all
+    fn search(&self, target: &str, exclude: Option<&Path>) -> Result<Vec<String>, Error> {
         log::debug!("Searching target in index: {}", target);
         // Special case an empty target
         if target.is_empty() {
-            return Ok(None);
+            return Ok(Vec::new());
         }
 
         // Get the index from the database
@@ -139,23 +139,40 @@ impl Index {
 
         // Create the query automaton and run it
         let subseq = automaton::Subsequence::new(target);
-        let results = match exclude {
+        match exclude {
             Some(p) => {
                 let path_str = p.to_string_lossy();
                 let filter = automaton::Str::new(path_str.as_ref()).complement();
-                fst_index
+                Ok(fst_index
                     .search(subseq.intersection(filter))
                     .into_stream()
-                    .into_strs()?
+                    .into_strs()?)
             }
             // A more elegant way would seem to use automaton::AlwaysMatch, but I just can't
             // find a way to make that typecheck (since operations on an Automaton don't return
             // an Automaton but types of the form Union<S,T>)
             // This is also why we only support one exclude string: a vec of exclude strings would
             // result in a type sig of Union<Union<...,_>> that can't be known at compile time
-            None => fst_index.search(subseq).into_stream().into_strs()?,
-        };
+            None => Ok(fst_index.search(subseq).into_stream().into_strs()?),
+        }
+    }
 
+    /// Returns a vec with all paths from the index that match the 'target' string
+    pub fn find_all(&self, target: &str, exclude: Option<&Path>) -> Result<Vec<PathBuf>, Error> {
+        self.search(target, exclude)
+            .map(|result| result.iter().map(|item| PathBuf::from(item)).collect())
+    }
+
+    /// Returns the best directory path from the index for the given 'target' string,
+    // uses last-visited timestamp as a tie-breaker for equally scored paths.
+    pub fn find_one(&self, target: &str, exclude: Option<&Path>) -> Result<Option<PathBuf>, Error> {
+        // Special case the empty target
+        if target.is_empty() {
+            return Ok(None);
+        }
+
+        // Search the index for strings that match
+        let results = self.search(target, exclude)?;
         log::debug!("FST result set: {:?}", results);
 
         // Score the results
@@ -517,22 +534,22 @@ mod tests {
     }
 
     #[test]
-    fn index_search_empty_index() {
+    fn index_find_one_empty_index() {
         let index = get_temporary_index();
         let pattern = "abcd";
 
-        assert!(index.search(pattern, None).unwrap().is_none())
+        assert!(index.find_one(pattern, None).unwrap().is_none())
     }
     #[test]
-    fn index_search_empty_index_empty_pattern() {
+    fn index_find_one_empty_index_empty_pattern() {
         let index = get_temporary_index();
         let pattern = "";
 
-        assert!(index.search(pattern, None).unwrap().is_none())
+        assert!(index.find_one(pattern, None).unwrap().is_none())
     }
 
     #[test]
-    fn index_search_non_empty_index_found() {
+    fn index_find_one_non_empty_index_found() {
         let index = get_temporary_index();
         let indexed_dir = tempdir().unwrap();
         let path_buf = indexed_dir.path();
@@ -541,7 +558,7 @@ mod tests {
         index.add(&path_buf).unwrap();
 
         assert_eq!(
-            index.search(pattern, None).unwrap(),
+            index.find_one(pattern, None).unwrap(),
             Some(PathBuf::from(path_buf))
         );
 
@@ -549,7 +566,7 @@ mod tests {
     }
 
     #[test]
-    fn index_search_non_empty_index_not_found() {
+    fn index_find_one_non_empty_index_not_found() {
         let index = get_temporary_index();
         let indexed_dir = tempdir().unwrap();
         let path_buf = indexed_dir.path();
@@ -557,13 +574,13 @@ mod tests {
 
         index.add(&path_buf).unwrap();
 
-        assert!(index.search(pattern, None).unwrap().is_none());
+        assert!(index.find_one(pattern, None).unwrap().is_none());
 
         indexed_dir.close().unwrap()
     }
 
     #[test]
-    fn index_search_non_empty_index_empty_pattern() {
+    fn index_find_one_non_empty_index_empty_pattern() {
         let index = get_temporary_index();
         let indexed_dir = tempdir().unwrap();
         let path_buf = indexed_dir.path();
@@ -571,13 +588,13 @@ mod tests {
 
         index.add(&path_buf).unwrap();
 
-        assert!(index.search(pattern, None).unwrap().is_none());
+        assert!(index.find_one(pattern, None).unwrap().is_none());
 
         indexed_dir.close().unwrap()
     }
 
     #[test]
-    fn index_search_non_empty_index_found_excluded() {
+    fn index_find_one_non_empty_index_found_excluded() {
         let index = get_temporary_index();
         let indexed_dir = tempdir().unwrap();
         let path_buf = indexed_dir.path();
@@ -585,7 +602,7 @@ mod tests {
 
         index.add(&path_buf).unwrap();
 
-        assert!(index.search(pattern, Some(&path_buf)).unwrap().is_none());
+        assert!(index.find_one(pattern, Some(&path_buf)).unwrap().is_none());
 
         indexed_dir.close().unwrap()
     }

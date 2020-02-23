@@ -7,9 +7,22 @@ use failure::Error;
 use prettytable::{cell, row, Table};
 use std::convert::TryInto;
 use std::io::{self, Write};
+use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::index::PathIndexEntry;
+
+// Prints a slice of PathBufs in a single line seperated by a space
+pub fn print_path_slice(paths: &[PathBuf]) -> Result<(), Error> {
+    let stdout = io::stdout();
+    let std_lock = stdout.lock();
+    let mut handle = io::BufWriter::new(std_lock);
+
+    for item in paths {
+        write!(handle, "{} ", item.display())?;
+    }
+    Ok(())
+}
 
 // Prints the Vec of index entries as line delimited json objects on stdout
 pub fn print_json(index_entries: &[PathIndexEntry]) -> Result<(), Error> {
