@@ -68,7 +68,7 @@ impl Index {
             // In any case: let's hope the sled serialization format remains stable
             // for the foreseeable future
             Err(sled::Error::Unsupported(_)) => {
-                println! {"Found incompatible database. Recreating."}
+                eprintln! {"Found incompatible database. Recreating."}
                 fs::remove_dir_all(&config.path)?;
                 config.open()?
             }
