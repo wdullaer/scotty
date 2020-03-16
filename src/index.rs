@@ -133,7 +133,7 @@ impl Index {
 
         // Get the index from the database
         let fst_index = match self.main.get(INDEX_KEY)? {
-            Some(bytes) => Set::from_bytes(bytes.deref().try_into()?)?,
+            Some(bytes) => Set::new(bytes.deref().try_into()?)?,
             None => Set::default(),
         };
 
@@ -231,7 +231,7 @@ impl Index {
     // Updates the fts index with the new path using the passed in operation (merge or remove)
     fn update_paths_index<F>(&self, path_bytes: &[u8], op: F) -> Result<(), Error>
     where
-        F: Fn(&Set, &Set) -> fst::Result<Set>,
+        F: Fn(&Set<Vec<u8>>, &Set<Vec<u8>>) -> fst::Result<Set<Vec<u8>>>,
     {
         log::debug!(
             "Updating path index: {}",
@@ -240,7 +240,7 @@ impl Index {
         let delta_fst = Set::from_iter(vec![path_bytes])?;
 
         let paths_fst = match self.main.get(INDEX_KEY)? {
-            Some(bytes) => Set::from_bytes(bytes.deref().try_into()?)?,
+            Some(bytes) => Set::new(bytes.deref().try_into()?)?,
             None => Set::default(),
         };
 
@@ -275,23 +275,26 @@ fn score_results(results: &[String], target: &str) -> Vec<Score> {
 }
 
 /// Merges (creates a union) between two fst::Set and returns the result as a newly allocated fst::Set
-fn merge_fst_sets(paths_set: &Set, delta_set: &Set) -> fst::Result<Set> {
+fn merge_fst_sets<D>(paths_set: &Set<D>, delta_set: &Set<D>) -> fst::Result<Set<Vec<u8>>>
+where D: AsRef<[u8]>,
+{
     log::debug!("Merging fst set");
     let stream = paths_set.op().add(delta_set.stream()).union();
 
     let mut paths_builder = SetBuilder::memory();
     paths_builder.extend_stream(stream)?;
-    paths_builder.into_inner().and_then(Set::from_bytes)
+    paths_builder.into_inner().and_then(Set::new)
 }
 
 /// Removes the second fst::Set from the first and returns the result as a newly allocated fst::Set
-fn remove_fst_set(paths_set: &Set, delta_set: &Set) -> fst::Result<Set> {
+fn remove_fst_set<D>(paths_set: &Set<D>, delta_set: &Set<D>) -> fst::Result<Set<Vec<u8>>> 
+where D: AsRef<[u8]>,
+{
     log::debug!("Removing fst set");
     let stream = paths_set.op().add(delta_set.stream()).difference();
-
     let mut paths_builder = SetBuilder::memory();
     paths_builder.extend_stream(stream)?;
-    paths_builder.into_inner().and_then(Set::from_bytes)
+    paths_builder.into_inner().and_then(Set::new)
 }
 
 #[derive(Ord, PartialOrd, PartialEq, Eq, Debug)]
