@@ -160,7 +160,7 @@ impl Index {
     /// Returns a vec with all paths from the index that match the 'target' string
     pub fn find_all(&self, target: &str, exclude: Option<&Path>) -> Result<Vec<PathBuf>, Error> {
         self.search(target, exclude)
-            .map(|result| result.iter().map(|item| PathBuf::from(item)).collect())
+            .map(|result| result.iter().map(PathBuf::from).collect())
     }
 
     /// Returns the best directory path from the index for the given 'target' string,
@@ -276,7 +276,8 @@ fn score_results(results: &[String], target: &str) -> Vec<Score> {
 
 /// Merges (creates a union) between two fst::Set and returns the result as a newly allocated fst::Set
 fn merge_fst_sets<D>(paths_set: &Set<D>, delta_set: &Set<D>) -> fst::Result<Set<Vec<u8>>>
-where D: AsRef<[u8]>,
+where
+    D: AsRef<[u8]>,
 {
     log::debug!("Merging fst set");
     let stream = paths_set.op().add(delta_set.stream()).union();
@@ -287,8 +288,9 @@ where D: AsRef<[u8]>,
 }
 
 /// Removes the second fst::Set from the first and returns the result as a newly allocated fst::Set
-fn remove_fst_set<D>(paths_set: &Set<D>, delta_set: &Set<D>) -> fst::Result<Set<Vec<u8>>> 
-where D: AsRef<[u8]>,
+fn remove_fst_set<D>(paths_set: &Set<D>, delta_set: &Set<D>) -> fst::Result<Set<Vec<u8>>>
+where
+    D: AsRef<[u8]>,
 {
     log::debug!("Removing fst set");
     let stream = paths_set.op().add(delta_set.stream()).difference();
