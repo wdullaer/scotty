@@ -14,6 +14,7 @@ use fst::automaton;
 use fst::{Automaton, IntoStreamer, Set, SetBuilder};
 use fuzzy_matcher::clangd::ClangdMatcher;
 use fuzzy_matcher::FuzzyMatcher;
+use regex_automata::dense::Builder;
 use serde::Serialize;
 use sled::{Config, Tree};
 
@@ -139,12 +140,16 @@ impl Index {
 
         // Create the query automaton and run it
         let subseq = automaton::Subsequence::new(target);
+        let regex = Builder::new()
+            .case_insensitive(true)
+            .build(&format!(".*{}.*", target))?;
+        let query = subseq.union(regex);
         match exclude {
             Some(p) => {
                 let path_str = p.to_string_lossy();
                 let filter = automaton::Str::new(path_str.as_ref()).complement();
                 Ok(fst_index
-                    .search(subseq.intersection(filter))
+                    .search(query.intersection(filter))
                     .into_stream()
                     .into_strs()?)
             }
@@ -153,7 +158,7 @@ impl Index {
             // an Automaton but types of the form Union<S,T>)
             // This is also why we only support one exclude string: a vec of exclude strings would
             // result in a type sig of Union<Union<...,_>> that can't be known at compile time
-            None => Ok(fst_index.search(subseq).into_stream().into_strs()?),
+            None => Ok(fst_index.search(query).into_stream().into_strs()?),
         }
     }
 
