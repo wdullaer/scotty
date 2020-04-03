@@ -4,7 +4,6 @@
 
 use chrono::NaiveDateTime;
 use failure::Error;
-use prettytable::{cell, row, Table};
 use std::convert::TryInto;
 use std::io::{self, Write};
 use std::path::PathBuf;
@@ -31,27 +30,31 @@ pub fn print_json(index_entries: &[PathIndexEntry]) -> Result<(), Error> {
     let mut handle = io::BufWriter::new(std_lock);
 
     for entry in index_entries {
-        writeln!(handle, "{}", serde_json::to_string(entry)?)?;
+        serde_json::to_writer(&mut handle, entry)?;
+        writeln!(handle)?;
     }
     Ok(())
 }
 
 // Prints the Vec of index entries as a human readable table on stdout
 pub fn print_human(index_entries: &[PathIndexEntry]) -> Result<(), Error> {
-    let mut table = Table::new();
+    let stdout = io::stdout();
+    let std_lock = stdout.lock();
+    let handle = io::BufWriter::new(std_lock);
+    let mut tab_handle = tabwriter::TabWriter::new(handle);
 
-    table.set_format(*prettytable::format::consts::FORMAT_CLEAN);
-    table.set_titles(row!["PATH", "TIMESTAMP"]);
+    writeln!(tab_handle, "PATH\tTIMESTAMP")?;
 
     for entry in index_entries {
-        table.add_row(row![
-            entry.path.to_string_lossy(),
+        writeln!(
+            tab_handle,
+            "{}\t{}",
+            entry.path.display(),
             get_datetime_string(&entry.timestamp)
-        ]);
+        )?;
     }
 
-    table.printstd();
-    Ok(())
+    Ok(tab_handle.flush()?)
 }
 
 // Converts a systemtime into a human readable string
