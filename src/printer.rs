@@ -18,7 +18,7 @@ pub fn print_path_slice(paths: &[PathBuf]) -> Result<(), Error> {
     let mut handle = io::BufWriter::new(std_lock);
 
     for item in paths {
-        write!(handle, "{} ", item.display())?;
+        writeln!(handle, "{}", item.display())?;
     }
     Ok(())
 }

@@ -29,8 +29,12 @@ _scotty() {
     if (( CURRENT = 2 )); then
         # Save the currently typed pattern
         local pattern=${words[2]}
-        results=($(_call_program entries scotty search -a ${pattern}))
-        _describe -t scotty-search 'Index entries' results
+        local res
+        local -a results
+        scotty search -a ${pattern} | while read -A res; do
+            results=($results "$res")
+        done
+        _describe -t scotty-search 'scotty' results
     fi
 }
 

@@ -24,3 +24,12 @@ s() {
         false
     fi
 }
+
+_scotty() {
+    OLDIFS=$IFS
+    IFS=$'\n'
+    COMPREPLY=( $(scotty search -a $2) )
+    IFS=$OLDIFS
+}
+
+complete -F _scotty s
