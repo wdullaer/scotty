@@ -24,14 +24,3 @@ s() {
         false
     fi
 }
-
-_scotty() {
-    if (( CURRENT = 2 )); then
-        # Save the currently typed pattern
-        local pattern=${words[2]}
-        results=($(_call_program entries scotty search -a ${pattern}))
-        _describe -t scotty-search 'Index entries' results
-    fi
-}
-
-compdef _scotty s
