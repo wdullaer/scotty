@@ -15,7 +15,7 @@ clap = "^2.31.2"
 sled = "^0.31.0"
 failure = "^0.1.7"
 exitfailure = "^0.5.1"
-fst = "^0.4.1"
+fst = "^0.4.2"
 regex-automata = { version = "^0.1.9", features = ["transducer"]}
 fuzzy-matcher = "0.3.4"
 bincode = "^1.2.1"
