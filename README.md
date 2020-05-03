@@ -15,8 +15,17 @@ Scotty uses full text search techniques to rapidly go to directories in your she
    cargo install scotty
    ```
 
+   #### Using Homebrew
+   If you have [homebrew](https://brew.sh) installed, you can install it from our custom tab.
+   Packages are provided for Mac and 64bit glibc Linux.
+
+   ```sh
+   brew tap wdullaer/scotty
+   brew install scotty
+   ```
+
    #### Download from github
-   Download the latest release from http://github.com/wdullaer/scotty/releases and extract it to a place on your path
+   Download the latest release from http://github.com/wdullaer/scotty/releases and extract it to a place on your path.
 
 2. Add the init script to your shell's config file:
 
