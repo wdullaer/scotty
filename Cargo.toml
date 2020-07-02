@@ -24,7 +24,7 @@ pretty_env_logger = "^0.4.0"
 directories = "^2.0.2"
 serde_json = "^1.0.53"
 serde = {version = "^1.0.111", features = ["derive"]}
-chrono = "^0.4.11"
+chrono = "^0.4.12"
 tabwriter = "^1.2.1"
 
 [dev-dependencies]
