@@ -17,7 +17,7 @@ failure = "^0.1.8"
 exitfailure = "^0.5.1"
 fst = "^0.4.4"
 regex-automata = { version = "^0.1.9", features = ["transducer"]}
-fuzzy-matcher = "0.3.4"
+fuzzy-matcher = "0.3.5"
 bincode = "^1.2.1"
 log = "^0.4.8"
 pretty_env_logger = "^0.4.0"
