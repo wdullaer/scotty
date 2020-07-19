@@ -202,7 +202,7 @@ jobs:
       - name: Install go (needed for changelog tool)
         uses: actions/setup-go@v2
         with:
-          go-version: 1.13
+          go-version: 1.14
       - name: Generate changelog
         run: |
           export PATH=${PATH}:$(go env GOPATH)/bin
@@ -224,3 +224,23 @@ jobs:
           body_path: CHANGELOG.md
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create homebrew release
+        uses: actions/github-script@v2
+        with:
+          github-token: ${{secrets.HOMEBREW_REPO_TOKEN}}
+          script: |
+            const fs = require('fs')
+            const macSha = fs.readFileSync("scotty-x86_64-apple-darwin.tar.gz.sha256", {encoding: "utf8"}).trim()
+            const linuxSha = fs.readFileSync("scotty-x86_64-unknown-linux-gnu.tar.gz.sha256", {encoding: "utf8"}).trim()
+            github.actions.createWorkflowDispatch({
+              owner: "wdullaer",
+              repo: "homebrew-scotty",
+              workflow_id: "workflow.yaml",
+              ref: "master",
+              inputs: {
+                "version": context.ref.substring(10), // "refs/tags/".length == 10
+                "mac-sha": macSha,
+                "linux-sha": linuxSha
+              }
+            })
