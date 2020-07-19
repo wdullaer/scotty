@@ -17,6 +17,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
       - name: Check commit message format (necessary to generate release changelogs)
         uses: docker://commitsar/commitsar:latest
   lint:
