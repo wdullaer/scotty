@@ -12,7 +12,7 @@ case $PROMPT_COMMAND in
 esac
 
 s() {
-    local output="$(__SCOTTY__ search -e $(pwd) ${1})"
+    local output="$(__SCOTTY__ search -e "$(pwd)" ${1})"
     if [[ -d "${output}" ]]; then
         if [[ -t 1 ]]; then # Use color if stdout is a terminal
             echo -e "\\033[31m${output}\\033[0m"
