@@ -82,6 +82,7 @@ jobs:
           override: true
       # Cache all the things!
       - name: Cache cargo registry
+        if: matrix.os != 'macOS-latest'
         uses: actions/cache@v2
         with:
           path: ~/.cargo/registry
@@ -92,6 +93,7 @@ jobs:
           path: ~/.cargo/git
           key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
       - name: Cache cargo build
+        if: matrix.os != 'macOS-latest'
         uses: actions/cache@v2
         with:
           path: target
