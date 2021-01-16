@@ -208,7 +208,7 @@ jobs:
       - name: Generate changelog
         run: |
           export PATH=${PATH}:$(go env GOPATH)/bin
-          go get -u github.com/git-chglog/git-chglog/cmd/git-chglog
+          GO111MODULE=on go get github.com/git-chglog/git-chglog/cmd/git-chglog
           git-chglog -c .github/chglog/config.yml $(git describe --tags) > CHANGELOG.md
 
       - name: Create GitHub release ${{ matrix.target }}
