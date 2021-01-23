@@ -193,6 +193,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
       - name: Download releases from github_build
         uses: actions/download-artifact@v2
         with:
