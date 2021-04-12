@@ -120,9 +120,7 @@ fn run_search(target: &str, exclude: Option<&Path>, find_all: bool) -> Result<()
     let index = Index::open(config::get_index_config()?)?;
 
     if find_all {
-        return Ok(printer::print_path_slice(
-            &index.find_all(target, exclude)?,
-        )?);
+        return printer::print_path_slice(&index.find_all(target, exclude)?);
     }
 
     loop {

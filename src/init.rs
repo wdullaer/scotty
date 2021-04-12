@@ -5,7 +5,7 @@
 use failure::Fail;
 use std::convert::TryFrom;
 use std::ffi::OsStr;
-use std::path::PathBuf;
+use std::path::Path;
 use std::{env, io};
 
 /// Models a supported shell. Will typically be instantiated from its string representation
@@ -72,7 +72,7 @@ pub fn init_shell(shell: Shell) -> io::Result<()> {
 }
 
 // Replace __SCOTTY__ with the path, applying proper escaping
-fn interpolate_scotty_path(script: &str, path: &PathBuf) -> String {
+fn interpolate_scotty_path(script: &str, path: &Path) -> String {
     script.replace("__SCOTTY__", &format!("\"{}\"", path.display()))
 }
 
@@ -123,7 +123,7 @@ mod tests {
     #[test]
     fn only_replaces_specific_token() {
         let script = "I am just a normal string";
-        let path = PathBuf::new();
+        let path = Path::new("");
 
         assert_eq!(interpolate_scotty_path(script, &path), script)
     }
@@ -132,7 +132,7 @@ mod tests {
     fn should_replace_token_with_value() {
         let script = "__SCOTTY__ init zsh";
         let expected_script = "\"/bin/scotty\" init zsh";
-        let path = PathBuf::from("/bin/scotty");
+        let path = Path::new("/bin/scotty");
 
         assert_eq!(interpolate_scotty_path(script, &path), expected_script)
     }
@@ -141,7 +141,7 @@ mod tests {
     fn should_replace_token_with_value_whitespace() {
         let script = "__SCOTTY__ init powershell";
         let expected_script = "\"C:\\Program Files\\scotty.exe\" init powershell";
-        let path = PathBuf::from("C:\\Program Files\\scotty.exe");
+        let path = Path::new("C:\\Program Files\\scotty.exe");
 
         assert_eq!(interpolate_scotty_path(script, &path), expected_script)
     }
@@ -152,7 +152,7 @@ mod tests {
 echo __SCOTTY__";
         let expected_script = "echo hello
 echo \"/bin/scotty\"";
-        let path = PathBuf::from("/bin/scotty");
+        let path = Path::new("/bin/scotty");
 
         assert_eq!(interpolate_scotty_path(script, &path), expected_script)
     }
