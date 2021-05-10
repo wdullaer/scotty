@@ -92,7 +92,7 @@ impl Index {
                 let tuple = item?;
                 let path = PathBuf::from(str::from_utf8(tuple.0.as_ref())?);
                 let timestamp = bincode::deserialize(tuple.1.as_ref())?;
-                Ok(PathIndexEntry { path, timestamp })
+                Ok(PathIndexEntry { timestamp, path })
             })
             .collect()
     }
