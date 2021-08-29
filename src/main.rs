@@ -126,7 +126,7 @@ fn run_search(target: &str, exclude: Option<&Path>, find_all: bool) -> Result<()
     loop {
         let directory = match index.find_one(target, exclude)? {
             None => {
-                return Err(Error::from(IndexError::NoResultsError {
+                return Err(Error::from(IndexError::NoResults {
                     pattern: target.to_owned(),
                 }))
             }

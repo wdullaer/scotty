@@ -12,7 +12,7 @@ use crate::index::IndexError;
 /// might make this location configurable in the future)
 pub fn get_index_config() -> Result<sled::Config, IndexError> {
     let mut db_path = ProjectDirs::from("com", "wdullaer", "scotty")
-        .ok_or(IndexError::BadDataDirectoryError)?
+        .ok_or(IndexError::BadDataDirectory)?
         .data_dir()
         .to_path_buf();
     db_path.push("scotty.db");

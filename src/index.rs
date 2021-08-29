@@ -25,13 +25,13 @@ const INDEX_KEY: &str = "index";
 #[derive(Debug, Fail, PartialEq, Eq)]
 pub enum IndexError {
     #[fail(display = "No path found for pattern `{}`", pattern)]
-    NoResultsError { pattern: String },
+    NoResults { pattern: String },
     #[fail(display = "Path `{}` is not a directory that exist", path)]
-    PathDoesNotExistError { path: String },
+    PathDoesNotExist { path: String },
     #[fail(display = "Path `{}` is not absolute", path)]
-    RelativePathError { path: String },
+    RelativePath { path: String },
     #[fail(display = "Could not determine writable location for index data")]
-    BadDataDirectoryError,
+    BadDataDirectory,
 }
 
 pub struct Index {
@@ -102,12 +102,12 @@ impl Index {
         log::debug!("Adding path to index: {}", path_buf.display());
         let path_string = path_buf.to_string_lossy();
         if !path_buf.is_dir() {
-            return Err(Error::from(IndexError::PathDoesNotExistError {
+            return Err(Error::from(IndexError::PathDoesNotExist {
                 path: path_string.into_owned(),
             }));
         }
         if !path_buf.is_absolute() {
-            return Err(Error::from(IndexError::RelativePathError {
+            return Err(Error::from(IndexError::RelativePath {
                 path: path_string.into_owned(),
             }));
         }
@@ -454,7 +454,7 @@ mod tests {
         let input = PathBuf::from("src");
         assert_eq!(
             index.add(&input).unwrap_err().downcast_ref::<IndexError>(),
-            Some(&IndexError::RelativePathError {
+            Some(&IndexError::RelativePath {
                 path: input.to_string_lossy().into_owned()
             })
         );
@@ -470,7 +470,7 @@ mod tests {
         File::create(&input).unwrap();
         assert_eq!(
             index.add(&input).unwrap_err().downcast_ref::<IndexError>(),
-            Some(&IndexError::PathDoesNotExistError {
+            Some(&IndexError::PathDoesNotExist {
                 path: input.to_string_lossy().into_owned()
             })
         );
@@ -484,7 +484,7 @@ mod tests {
         let input = PathBuf::from("foo");
         assert_eq!(
             index.add(&input).unwrap_err().downcast_ref::<IndexError>(),
-            Some(&IndexError::PathDoesNotExistError {
+            Some(&IndexError::PathDoesNotExist {
                 path: "foo".to_owned()
             })
         );
