@@ -517,10 +517,10 @@ mod tests {
         let input_dir = tempdir().unwrap();
         let input = input_dir.path();
 
-        index.add(&input).unwrap();
+        index.add(input).unwrap();
 
-        assert!(index.delete(&input).is_ok());
-        assert!(!index.has_path(&input));
+        assert!(index.delete(input).is_ok());
+        assert!(!index.has_path(input));
         input_dir.close().unwrap()
     }
 
@@ -533,8 +533,8 @@ mod tests {
         let path2 = input_dir_2.path();
         let input = PathBuf::from("foo");
 
-        index.add(&path1).unwrap();
-        index.add(&path2).unwrap();
+        index.add(path1).unwrap();
+        index.add(path2).unwrap();
 
         assert!(index.delete(&input).is_ok());
         assert!(!index.has_path(&input));
@@ -565,7 +565,7 @@ mod tests {
         let path_buf = indexed_dir.path();
         let pattern = path_buf.file_name().unwrap().to_str().unwrap();
 
-        index.add(&path_buf).unwrap();
+        index.add(path_buf).unwrap();
 
         assert_eq!(
             index.find_one(pattern, None).unwrap(),
@@ -582,7 +582,7 @@ mod tests {
         let path_buf = indexed_dir.path();
         let pattern = "#!";
 
-        index.add(&path_buf).unwrap();
+        index.add(path_buf).unwrap();
 
         assert!(index.find_one(pattern, None).unwrap().is_none());
 
@@ -596,7 +596,7 @@ mod tests {
         let path_buf = indexed_dir.path();
         let pattern = "";
 
-        index.add(&path_buf).unwrap();
+        index.add(path_buf).unwrap();
 
         assert!(index.find_one(pattern, None).unwrap().is_none());
 
@@ -610,9 +610,9 @@ mod tests {
         let path_buf = indexed_dir.path();
         let pattern = path_buf.file_name().unwrap().to_str().unwrap();
 
-        index.add(&path_buf).unwrap();
+        index.add(path_buf).unwrap();
 
-        assert!(index.find_one(pattern, Some(&path_buf)).unwrap().is_none());
+        assert!(index.find_one(pattern, Some(path_buf)).unwrap().is_none());
 
         indexed_dir.close().unwrap()
     }
@@ -635,8 +635,8 @@ mod tests {
         let path1 = input_dir_1.path();
         let path2 = input_dir_2.path();
 
-        index.add(&path1).unwrap();
-        index.add(&path2).unwrap();
+        index.add(path1).unwrap();
+        index.add(path2).unwrap();
 
         let mut list = index.list().unwrap();
         list.sort();

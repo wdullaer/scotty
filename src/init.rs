@@ -125,7 +125,7 @@ mod tests {
         let script = "I am just a normal string";
         let path = Path::new("");
 
-        assert_eq!(interpolate_scotty_path(script, &path), script)
+        assert_eq!(interpolate_scotty_path(script, path), script)
     }
 
     #[test]
@@ -134,7 +134,7 @@ mod tests {
         let expected_script = "\"/bin/scotty\" init zsh";
         let path = Path::new("/bin/scotty");
 
-        assert_eq!(interpolate_scotty_path(script, &path), expected_script)
+        assert_eq!(interpolate_scotty_path(script, path), expected_script)
     }
 
     #[test]
@@ -143,7 +143,7 @@ mod tests {
         let expected_script = "\"C:\\Program Files\\scotty.exe\" init powershell";
         let path = Path::new("C:\\Program Files\\scotty.exe");
 
-        assert_eq!(interpolate_scotty_path(script, &path), expected_script)
+        assert_eq!(interpolate_scotty_path(script, path), expected_script)
     }
 
     #[test]
@@ -154,6 +154,6 @@ echo __SCOTTY__";
 echo \"/bin/scotty\"";
         let path = Path::new("/bin/scotty");
 
-        assert_eq!(interpolate_scotty_path(script, &path), expected_script)
+        assert_eq!(interpolate_scotty_path(script, path), expected_script)
     }
 }
