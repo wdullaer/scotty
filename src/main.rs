@@ -87,7 +87,7 @@ fn main() -> Result<(), ExitFailure> {
         }
         ("search", Some(sub_m)) => {
             let target = sub_m.value_of("target").expect("Target is missing");
-            let excluded_path = sub_m.value_of_os("exclude").map(|value| Path::new(value));
+            let excluded_path = sub_m.value_of_os("exclude").map(Path::new);
             let find_all = sub_m.is_present("all");
 
             Ok(run_search(target, excluded_path, find_all)?)
