@@ -1,6 +1,8 @@
 name: Scotty Workflow
 on:
   push:
+    branches:
+      - main
     paths-ignore:
       - "**.md"
       - "docs/**"
@@ -21,8 +23,8 @@ jobs:
           fetch-depth: 0
       - name: Check commit message format (necessary to generate release changelogs)
         uses: docker://commitsar/commitsar:latest
-  lint:
-    name: Formatter & Linter
+  build-lint:
+    name: Build, Formatter & Linter
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -33,40 +35,27 @@ jobs:
           components: rustfmt, clippy
           override: true
       # Cache all the things!
-      - name: Cache cargo registry
-        uses: actions/cache@v2
+      - uses: Swatinem/rust-cache@v1
         with:
-          path: ~/.cargo/registry
-          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
-      - name: Cache cargo index
-        uses: actions/cache@v2
-        with:
-          path: ~/.cargo/git
-          key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
-      - name: Cache cargo build
-        uses: actions/cache@v2
-        with:
-          path: target
-          key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
-      # Check if the code can compile
-      - uses: actions-rs/cargo@v1
-        with:
-          command: check
-          args: --all
+          key: v1
       # Check if the code meets formatting guidelines
       - uses: actions-rs/cargo@v1
         with:
           command: fmt
           args: --all -- --check
-      # Check if the code has no linter recommendations
-      - uses: actions-rs/clippy-check@v1
+      # Build to see if the code can compile
+      - uses: actions-rs/cargo@v1
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          command: build
+          args: --all-targets --all-features
+      # Check if the code has no linter recommendations (clippy can reuse build artifacts, but not the other way around)
+      - uses: actions-rs/cargo@v1
+        with:
+          command: clippy
           args: --all-targets --all-features -- -D clippy::all
   
   test:
     name: Test Matrix
-    needs: [lint]
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -80,24 +69,11 @@ jobs:
           profile: minimal
           toolchain: ${{ matrix.rust }}
           override: true
+          components: rustfmt, clippy
       # Cache all the things!
-      - name: Cache cargo registry
-        if: matrix.os != 'macOS-latest'
-        uses: actions/cache@v2
+      - uses: Swatinem/rust-cache@v1
         with:
-          path: ~/.cargo/registry
-          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
-      - name: Cache cargo index
-        uses: actions/cache@v2
-        with:
-          path: ~/.cargo/git
-          key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
-      - name: Cache cargo build
-        if: matrix.os != 'macOS-latest'
-        uses: actions/cache@v2
-        with:
-          path: target
-          key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+          key: v1
       # Run the tests
       - uses: actions-rs/cargo@v1
         with:
