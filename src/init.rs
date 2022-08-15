@@ -16,7 +16,7 @@ use std::{env, io};
 ///
 /// assert_eq!(shell, Shell::Zsh);
 /// ```
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum Shell {
     Zsh,
     Bash,
