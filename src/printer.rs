@@ -64,9 +64,9 @@ fn get_datetime_string(systime: &SystemTime) -> String {
     let duration = systime
         .duration_since(UNIX_EPOCH)
         .expect("timestamp should be after UNIX_EPOCH");
-    let datetime = NaiveDateTime::from_timestamp(
+    let datetime = NaiveDateTime::from_timestamp_opt(
         duration.as_secs().try_into().unwrap(),
         duration.subsec_nanos(),
-    );
+    ).expect("timestamp out of range");
     format!("{}", datetime)
 }
