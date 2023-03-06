@@ -67,6 +67,7 @@ fn get_datetime_string(systime: &SystemTime) -> String {
     let datetime = NaiveDateTime::from_timestamp_opt(
         duration.as_secs().try_into().unwrap(),
         duration.subsec_nanos(),
-    ).expect("timestamp out of range");
+    )
+    .expect("timestamp out of range");
     format!("{}", datetime)
 }
