@@ -11,7 +11,7 @@ repository = "https://github.com/wdullaer/scotty"
 description = "A chillingly fast dir switcher using fuzzy search."
 
 [dependencies]
-clap = "^2.34.0"
+clap = "^4.1.8"
 sled = "^0.34.7"
 failure = "^0.1.8"
 exitfailure = "^0.5.1"
