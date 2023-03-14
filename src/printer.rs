@@ -2,8 +2,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+use anyhow::Result;
 use chrono::NaiveDateTime;
-use failure::Error;
 use std::convert::TryInto;
 use std::io::{self, Write};
 use std::path::PathBuf;
@@ -12,7 +12,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use crate::index::PathIndexEntry;
 
 // Prints a slice of PathBufs in a single line seperated by a space
-pub fn print_path_slice(paths: &[PathBuf]) -> Result<(), Error> {
+pub fn print_path_slice(paths: &[PathBuf]) -> Result<()> {
     let stdout = io::stdout();
     let std_lock = stdout.lock();
     let mut handle = io::BufWriter::new(std_lock);
@@ -24,7 +24,7 @@ pub fn print_path_slice(paths: &[PathBuf]) -> Result<(), Error> {
 }
 
 // Prints the Vec of index entries as line delimited json objects on stdout
-pub fn print_json(index_entries: &[PathIndexEntry]) -> Result<(), Error> {
+pub fn print_json(index_entries: &[PathIndexEntry]) -> Result<()> {
     let stdout = io::stdout();
     let std_lock = stdout.lock();
     let mut handle = io::BufWriter::new(std_lock);
@@ -37,7 +37,7 @@ pub fn print_json(index_entries: &[PathIndexEntry]) -> Result<(), Error> {
 }
 
 // Prints the Vec of index entries as a human readable table on stdout
-pub fn print_human(index_entries: &[PathIndexEntry]) -> Result<(), Error> {
+pub fn print_human(index_entries: &[PathIndexEntry]) -> Result<()> {
     let stdout = io::stdout();
     let std_lock = stdout.lock();
     let handle = io::BufWriter::new(std_lock);

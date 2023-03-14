@@ -2,11 +2,11 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use failure::Fail;
 use std::convert::TryFrom;
 use std::ffi::OsStr;
 use std::path::Path;
-use std::{env, io};
+use std::{env, fmt, io};
+use thiserror::Error;
 
 /// Models a supported shell. Will typically be instantiated from its string representation
 ///
@@ -16,17 +16,16 @@ use std::{env, io};
 ///
 /// assert_eq!(shell, Shell::Zsh);
 /// ```
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub enum Shell {
     Zsh,
     Bash,
 }
 
-#[derive(Debug, Fail, PartialEq, Eq)]
+#[derive(Debug, Error, PartialEq, Eq)]
 pub enum ShellError {
-    #[fail(
-        display = "`{}` is not a supported shell string representation. Must be one of: [bash, zsh]",
-        name
+    #[error(
+        "`{name}` is not a supported shell string representation. Must be one of: [bash, zsh]"
     )]
     UnknownShellName { name: String },
 }
@@ -53,11 +52,26 @@ impl TryFrom<&OsStr> for Shell {
     }
 }
 
+impl fmt::Debug for Shell {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Shell::Zsh => write!(f, "zsh"),
+            Shell::Bash => write!(f, "bash"),
+        }
+    }
+}
+
+impl Shell {
+    pub fn all_variants() -> &'static [Shell] {
+        &[Shell::Bash, Shell::Zsh]
+    }
+}
+
 const ZSH_INIT: &str = include_str!("scotty.zsh");
 const BASH_INIT: &str = include_str!("scotty.bash");
 
 /// Returns the bootstrap script for a specific shell
-pub fn init_shell(shell: Shell) -> io::Result<()> {
+pub fn init_shell(shell: &Shell) -> io::Result<()> {
     let setup_script = match shell {
         Shell::Zsh => ZSH_INIT,
         Shell::Bash => BASH_INIT,

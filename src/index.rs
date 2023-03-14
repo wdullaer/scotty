@@ -9,7 +9,7 @@ use std::path::{Path, PathBuf};
 use std::str;
 use std::time::SystemTime;
 
-use failure::{Error, Fail};
+use anyhow::Result;
 use fst::automaton;
 use fst::{Automaton, IntoStreamer, Set, SetBuilder};
 use fuzzy_matcher::clangd::ClangdMatcher;
@@ -17,20 +17,21 @@ use fuzzy_matcher::FuzzyMatcher;
 use regex_automata::dense::Builder;
 use serde::Serialize;
 use sled::{Config, Tree};
+use thiserror::Error;
 
 const PATHS_TREE: &str = "paths";
 const MAIN_TREE: &str = "main";
 const INDEX_KEY: &str = "index";
 
-#[derive(Debug, Fail, PartialEq, Eq)]
+#[derive(Debug, Error, PartialEq, Eq)]
 pub enum IndexError {
-    #[fail(display = "No path found for pattern `{}`", pattern)]
-    NoResults { pattern: String },
-    #[fail(display = "Path `{}` is not a directory that exist", path)]
-    PathDoesNotExist { path: String },
-    #[fail(display = "Path `{}` is not absolute", path)]
-    RelativePath { path: String },
-    #[fail(display = "Could not determine writable location for index data")]
+    #[error("No path found for pattern `{0}`")]
+    NoResults(String),
+    #[error("Path `{0}` is not a directory that exist")]
+    PathDoesNotExist(String),
+    #[error("Path `{0}` is not absolute")]
+    RelativePath(String),
+    #[error("Could not determine writable location for index data")]
     BadDataDirectory,
 }
 
@@ -47,7 +48,7 @@ pub struct PathIndexEntry {
 
 impl Index {
     /// Opens and configures a new sled database with config
-    pub fn open(config: Config) -> Result<Index, Error> {
+    pub fn open(config: Config) -> Result<Index> {
         log::debug!("Opening db for config: {:?}", config);
         let db = match config.open() {
             // versions 0.1.0 and 0.2.0 used an older version of sled which has
@@ -73,7 +74,7 @@ impl Index {
                 fs::remove_dir_all(&config.path)?;
                 config.open()?
             }
-            Err(e) => return Err(Error::from(e)),
+            Err(e) => return Err(e.into()),
             Ok(db) => db,
         };
         let main_tree = db.open_tree(MAIN_TREE)?;
@@ -85,7 +86,7 @@ impl Index {
     }
 
     /// Produces a Vec that contains all current entries in the index
-    pub fn list(&self) -> Result<Vec<PathIndexEntry>, Error> {
+    pub fn list(&self) -> Result<Vec<PathIndexEntry>> {
         self.paths
             .iter()
             .map(|item| {
@@ -98,18 +99,14 @@ impl Index {
     }
 
     /// Adds a path to the database and update the indexes
-    pub fn add(&self, path_buf: &Path) -> Result<(), Error> {
+    pub fn add(&self, path_buf: &Path) -> Result<()> {
         log::debug!("Adding path to index: {}", path_buf.display());
         let path_string = path_buf.to_string_lossy();
         if !path_buf.is_dir() {
-            return Err(Error::from(IndexError::PathDoesNotExist {
-                path: path_string.into_owned(),
-            }));
+            return Err(IndexError::PathDoesNotExist(path_string.into_owned()).into());
         }
         if !path_buf.is_absolute() {
-            return Err(Error::from(IndexError::RelativePath {
-                path: path_string.into_owned(),
-            }));
+            return Err(IndexError::RelativePath(path_string.into_owned()).into());
         }
 
         // Check if the path is already known and update its last modified timestamp
@@ -125,7 +122,7 @@ impl Index {
 
     /// Returns a vec with all strings from the index that match the 'target' string
     /// This is the internal implemenation backing find_one and find_all
-    fn search(&self, target: &str, exclude: Option<&Path>) -> Result<Vec<String>, Error> {
+    fn search(&self, target: &str, exclude: Option<&Path>) -> Result<Vec<String>> {
         log::debug!("Searching target in index: {}", target);
         // Special case an empty target
         if target.is_empty() {
@@ -163,14 +160,14 @@ impl Index {
     }
 
     /// Returns a vec with all paths from the index that match the 'target' string
-    pub fn find_all(&self, target: &str, exclude: Option<&Path>) -> Result<Vec<PathBuf>, Error> {
+    pub fn find_all(&self, target: &str, exclude: Option<&Path>) -> Result<Vec<PathBuf>> {
         self.search(target, exclude)
             .map(|result| result.iter().map(PathBuf::from).collect())
     }
 
     /// Returns the best directory path from the index for the given 'target' string,
     // uses last-visited timestamp as a tie-breaker for equally scored paths.
-    pub fn find_one(&self, target: &str, exclude: Option<&Path>) -> Result<Option<PathBuf>, Error> {
+    pub fn find_one(&self, target: &str, exclude: Option<&Path>) -> Result<Option<PathBuf>> {
         // Special case the empty target
         if target.is_empty() {
             return Ok(None);
@@ -191,7 +188,7 @@ impl Index {
     }
 
     /// Removes a path from the index, will succeed even if the path is not indexed
-    pub fn delete(&self, path_buf: &Path) -> Result<(), Error> {
+    pub fn delete(&self, path_buf: &Path) -> Result<()> {
         log::debug!("Deleting path from index: {}", path_buf.display());
         let path_string = path_buf.to_string_lossy();
         let path_bytes = path_string.as_bytes();
@@ -201,7 +198,7 @@ impl Index {
         }
     }
 
-    fn get_timestamp(&self, path: &Path) -> Result<Option<SystemTime>, Error> {
+    fn get_timestamp(&self, path: &Path) -> Result<Option<SystemTime>> {
         let time_bytes = self.paths.get(path.to_string_lossy().as_bytes())?;
         Ok(time_bytes
             .map(|x| bincode::deserialize::<SystemTime>(x.as_ref()))
@@ -211,7 +208,7 @@ impl Index {
     // Consumes the vector and returns the item with the best score
     // It will use the timestamp stored in the database as a tie-breaker
     // Care is taken to minimize the amount of database lookups
-    fn get_best_score(&self, mut results: Vec<Score>) -> Result<Option<Score>, Error> {
+    fn get_best_score(&self, mut results: Vec<Score>) -> Result<Option<Score>> {
         if results.is_empty() {
             return Ok(None);
         }
@@ -234,7 +231,7 @@ impl Index {
     }
 
     // Updates the fts index with the new path using the passed in operation (merge or remove)
-    fn update_paths_index<F>(&self, path_bytes: &[u8], op: F) -> Result<(), Error>
+    fn update_paths_index<F>(&self, path_bytes: &[u8], op: F) -> Result<()>
     where
         F: Fn(&Set<Vec<u8>>, &Set<Vec<u8>>) -> fst::Result<Set<Vec<u8>>>,
     {
@@ -454,9 +451,9 @@ mod tests {
         let input = PathBuf::from("src");
         assert_eq!(
             index.add(&input).unwrap_err().downcast_ref::<IndexError>(),
-            Some(&IndexError::RelativePath {
-                path: input.to_string_lossy().into_owned()
-            })
+            Some(&IndexError::RelativePath(
+                input.to_string_lossy().into_owned()
+            ))
         );
         assert!(!index.has_path(&input))
     }
@@ -470,9 +467,9 @@ mod tests {
         File::create(&input).unwrap();
         assert_eq!(
             index.add(&input).unwrap_err().downcast_ref::<IndexError>(),
-            Some(&IndexError::PathDoesNotExist {
-                path: input.to_string_lossy().into_owned()
-            })
+            Some(&IndexError::PathDoesNotExist(
+                input.to_string_lossy().into_owned()
+            ))
         );
         assert!(!index.has_path(&input));
         input_dir.close().unwrap()
@@ -484,9 +481,7 @@ mod tests {
         let input = PathBuf::from("foo");
         assert_eq!(
             index.add(&input).unwrap_err().downcast_ref::<IndexError>(),
-            Some(&IndexError::PathDoesNotExist {
-                path: "foo".to_owned()
-            })
+            Some(&IndexError::PathDoesNotExist("foo".to_owned()))
         );
         assert!(!index.has_path(&input))
     }

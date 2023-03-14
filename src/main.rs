@@ -2,11 +2,9 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use clap::{App, AppSettings, Arg, SubCommand};
-use exitfailure::ExitFailure;
-use failure::Error;
+use anyhow::Result;
+use clap::{command, Arg, ArgAction, Command};
 use std::convert::TryFrom;
-use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
 
 use crate::index::{Index, IndexError};
@@ -17,104 +15,116 @@ mod index;
 mod init;
 mod printer;
 
-fn main() -> Result<(), ExitFailure> {
+fn main() -> Result<()> {
     pretty_env_logger::init();
-    let path_arg = Arg::with_name("path")
+    let path_arg = Arg::new("path")
         .value_name("PATH")
         .help("The path to add into the index")
         .required(true);
 
-    let target_arg = Arg::with_name("target")
+    let target_arg = Arg::new("target")
         .value_name("TARGET")
         .help("The target to jump to")
         .required(true);
 
-    let exclude_arg = Arg::with_name("exclude")
+    let exclude_arg = Arg::new("exclude")
         .value_name("PATH")
         .long("exclude")
-        .short("e")
+        .short('e')
         .number_of_values(1)
         .help("Exclude the given path from the search results");
 
-    let all_arg = Arg::with_name("all")
+    let all_arg = Arg::new("all")
         .long("all")
-        .short("a")
+        .short('a')
+        .action(ArgAction::SetTrue)
         .help("Return all matched entries instead of only the most relevant one");
 
-    let shell_arg = Arg::with_name("shell")
+    let shell_arg = Arg::new("shell")
         .value_name("SHELL")
-        .help("The shell scotty needs to integrate with")
+        .help(format!(
+            "The shell scotty needs to integrate with. One of: {:?}",
+            Shell::all_variants()
+        ))
+        .value_parser(parse_shell)
         .required(true);
 
-    let json_arg = Arg::with_name("json")
+    let json_arg = Arg::new("json")
         .long("json")
+        .action(ArgAction::SetTrue)
         .help("Print output as a series of newline delimited json objects");
 
-    let matches = App::new("scotty")
+    let matches = command!()
         .version(clap::crate_version!())
         .author(clap::crate_authors!())
         .about("Transports you into a directory based on previous usage")
-        .setting(AppSettings::SubcommandRequiredElseHelp)
+        .subcommand_required(true)
         .subcommand(
-            SubCommand::with_name("add")
+            Command::new("add")
                 .about("Add a path to the index")
                 .arg(&path_arg),
         )
         .subcommand(
-            SubCommand::with_name("search")
+            Command::new("search")
                 .about("Searches a directory based on the input and the current index")
                 .arg(&exclude_arg)
                 .arg(&all_arg)
                 .arg(&target_arg),
         )
         .subcommand(
-            SubCommand::with_name("init")
+            Command::new("init")
                 .about("Integrates scotty in your shell")
                 .arg(&shell_arg),
         )
         .subcommand(
-            SubCommand::with_name("list")
+            Command::new("list")
                 .about("Print the current index")
                 .arg(&json_arg),
         )
         .get_matches();
 
     match matches.subcommand() {
-        ("add", Some(sub_m)) => {
-            let path = sub_m.value_of_os("path").expect("Path is missing");
+        Some(("add", sub_m)) => {
+            let path = sub_m.get_one::<String>("path").expect("Path is missing");
 
             Ok(run_add(path)?)
         }
-        ("search", Some(sub_m)) => {
-            let target = sub_m.value_of("target").expect("Target is missing");
-            let excluded_path = sub_m.value_of_os("exclude").map(Path::new);
-            let find_all = sub_m.is_present("all");
+        Some(("search", sub_m)) => {
+            let target = sub_m
+                .get_one::<String>("target")
+                .expect("Target is missing");
+            let excluded_path = sub_m.get_one::<String>("exclude").map(Path::new);
+            let find_all = sub_m.get_flag("all");
 
             Ok(run_search(target, excluded_path, find_all)?)
         }
-        ("init", Some(sub_m)) => {
-            let shell = sub_m.value_of_os("shell").expect("Shell is missing");
+        Some(("init", sub_m)) => {
+            let shell = sub_m.get_one("shell").expect("Shell is missing");
 
             Ok(run_init(shell)?)
         }
-        ("list", Some(sub_m)) => {
-            let is_json = sub_m.is_present("json");
+        Some(("list", sub_m)) => {
+            let is_json = sub_m.get_flag("json");
 
             Ok(run_list(is_json)?)
         }
-        _ => Ok(()),
+        _ => Ok(()), // Unreachable
     }
 }
 
-fn run_add(path: &OsStr) -> Result<(), Error> {
-    log::debug!("Running add with path: {}", path.to_string_lossy());
+fn parse_shell(shell: &str) -> Result<Shell, init::ShellError> {
+    Shell::try_from(shell)
+}
+
+fn run_add(path: &str) -> Result<()> {
+    log::debug!("Running add with path: {}", path);
     let index = Index::open(config::get_index_config()?)?;
     let path_buf = PathBuf::from(path);
     index.add(&path_buf)?;
     Ok(())
 }
 
-fn run_search(target: &str, exclude: Option<&Path>, find_all: bool) -> Result<(), Error> {
+fn run_search(target: &str, exclude: Option<&Path>, find_all: bool) -> Result<()> {
     log::debug!("Running search with target: {}", target);
 
     let index = Index::open(config::get_index_config()?)?;
@@ -125,11 +135,7 @@ fn run_search(target: &str, exclude: Option<&Path>, find_all: bool) -> Result<()
 
     loop {
         let directory = match index.find_one(target, exclude)? {
-            None => {
-                return Err(Error::from(IndexError::NoResults {
-                    pattern: target.to_owned(),
-                }))
-            }
+            None => return Err(IndexError::NoResults(target.to_owned()).into()),
             Some(d) => d,
         };
         if !directory.is_dir() {
@@ -142,7 +148,7 @@ fn run_search(target: &str, exclude: Option<&Path>, find_all: bool) -> Result<()
     Ok(())
 }
 
-fn run_list(is_json: bool) -> Result<(), Error> {
+fn run_list(is_json: bool) -> Result<()> {
     log::debug!("Running list with raw output: {}", is_json);
     let index = Index::open(config::get_index_config()?)?;
     if is_json {
@@ -152,8 +158,7 @@ fn run_list(is_json: bool) -> Result<(), Error> {
     }
 }
 
-fn run_init(target: &OsStr) -> Result<(), Error> {
-    log::debug!("Running init with shell: {}", target.to_string_lossy());
-    let shell = Shell::try_from(target)?;
+fn run_init(shell: &Shell) -> Result<()> {
+    log::debug!("Running init with shell: {:?}", shell);
     Ok(init::init_shell(shell)?)
 }
