@@ -227,8 +227,9 @@ jobs:
           github-token: ${{secrets.HOMEBREW_REPO_TOKEN}}
           script: |
             const fs = require('fs')
-            const macSha = fs.readFileSync("scotty-x86_64-apple-darwin.tar.gz.sha256", {encoding: "utf8"}).trim()
-            const linuxSha = fs.readFileSync("scotty-x86_64-unknown-linux-gnu.tar.gz.sha256", {encoding: "utf8"}).trim()
+            const macAmd64Sha = fs.readFileSync("scotty-x86_64-apple-darwin.tar.gz.sha256", {encoding: "utf8"}).trim()
+            const macArm64Sha = fs.readFileSync("scotty-arm64-apple-darwin.tar.gz.sha256", {encoding: "utf8"}).trim()
+            const linuxAmd64Sha = fs.readFileSync("scotty-x86_64-unknown-linux-gnu.tar.gz.sha256", {encoding: "utf8"}).trim()
             github.actions.createWorkflowDispatch({
               owner: "wdullaer",
               repo: "homebrew-scotty",
@@ -236,7 +237,8 @@ jobs:
               ref: "master",
               inputs: {
                 "version": context.ref.substring(10), // "refs/tags/".length == 10
-                "mac-sha": macSha,
-                "linux-sha": linuxSha
+                "mac-amd64-sha": macAmd64Sha,
+                "mac-arm64-sha": macArm64Sha,
+                "linux-amd64-sha": linuxAmd64Sha
               }
             })
