@@ -14,7 +14,7 @@ description = "A chillingly fast dir switcher using fuzzy search."
 clap = { version = "^4.3.21", features = ["cargo"]}
 sled = "^0.34.7"
 thiserror = "^1.0.46"
-anyhow = "^1.0.72"
+anyhow = "^1.0.74"
 fst = "^0.4.7"
 regex-automata = { version = "^0.1.10", features = ["transducer"]}
 fuzzy-matcher = "0.3.7"
