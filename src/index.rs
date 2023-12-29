@@ -2,7 +2,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use std::convert::TryInto;
 use std::fs;
 use std::ops::Deref;
 use std::path::{Path, PathBuf};
@@ -131,7 +130,7 @@ impl Index {
 
         // Get the index from the database
         let fst_index = match self.main.get(INDEX_KEY)? {
-            Some(bytes) => Set::new(bytes.deref().try_into()?)?,
+            Some(bytes) => Set::new(bytes.deref().into())?,
             None => Set::default(),
         };
 
@@ -242,7 +241,7 @@ impl Index {
         let delta_fst = Set::from_iter(vec![path_bytes])?;
 
         let paths_fst = match self.main.get(INDEX_KEY)? {
-            Some(bytes) => Set::new(bytes.deref().try_into()?)?,
+            Some(bytes) => Set::new(bytes.deref().into())?,
             None => Set::default(),
         };
 
