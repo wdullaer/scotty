@@ -28,7 +28,7 @@ chrono = "^0.4.34"
 tabwriter = "^1.4.0"
 
 [dev-dependencies]
-tempfile = "^3.10.0"
+tempfile = "^3.10.1"
 
 [profile.release]
 lto = true
