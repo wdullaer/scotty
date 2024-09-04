@@ -196,7 +196,7 @@ jobs:
         run: for file in scotty-*; do openssl dgst -sha256 -r "$file" | awk '{print $1}' > "${file}.sha256"; done
 
       - name: Install go (needed for changelog tool)
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v5
         with:
           go-version: 1.14
       - name: Generate changelog
