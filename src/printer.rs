@@ -3,7 +3,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 use anyhow::Result;
-use chrono::NaiveDateTime;
+use chrono::DateTime;
 use std::convert::TryInto;
 use std::io::{self, Write};
 use std::path::PathBuf;
@@ -64,7 +64,7 @@ fn get_datetime_string(systime: &SystemTime) -> String {
     let duration = systime
         .duration_since(UNIX_EPOCH)
         .expect("timestamp should be after UNIX_EPOCH");
-    let datetime = NaiveDateTime::from_timestamp_opt(
+    let datetime = DateTime::from_timestamp(
         duration.as_secs().try_into().unwrap(),
         duration.subsec_nanos(),
     )
