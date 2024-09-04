@@ -35,7 +35,7 @@ jobs:
           components: rustfmt, clippy
           override: true
       # Cache all the things!
-      - uses: Swatinem/rust-cache@v1
+      - uses: Swatinem/rust-cache@v2
         with:
           key: v1
       # Check if the code meets formatting guidelines
@@ -71,7 +71,7 @@ jobs:
           override: true
           components: rustfmt, clippy
       # Cache all the things!
-      - uses: Swatinem/rust-cache@v1
+      - uses: Swatinem/rust-cache@v2
         with:
           key: v1
       # Run the tests
