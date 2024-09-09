@@ -206,7 +206,7 @@ jobs:
           git-chglog -c .github/chglog/config.yml $(git describe --tags) > CHANGELOG.md
 
       - name: Create GitHub release ${{ matrix.target }}
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           files: |
             scotty-x86_64-unknown-linux-gnu.tar.gz
