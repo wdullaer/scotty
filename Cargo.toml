@@ -11,10 +11,10 @@ repository = "https://github.com/wdullaer/scotty"
 description = "A chillingly fast dir switcher using fuzzy search."
 
 [dependencies]
-clap = { version = "^4.5.21", features = ["cargo"]}
+clap = { version = "^4.5.23", features = ["cargo"]}
 sled = "^0.34.7"
-thiserror = "^2.0.3"
-anyhow = "^1.0.93"
+thiserror = "^2.0.6"
+anyhow = "^1.0.94"
 fst = "^0.4.7"
 regex-automata = { version = "^0.1.10", features = ["transducer"]}
 fuzzy-matcher = "0.3.7"
