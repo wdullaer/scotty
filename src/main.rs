@@ -117,7 +117,7 @@ fn parse_shell(shell: &str) -> Result<Shell, init::ShellError> {
 }
 
 fn run_add(path: &str) -> Result<()> {
-    log::debug!("Running add with path: {}", path);
+    log::debug!("Running add with path: {path}");
     let index = Index::open(config::get_index_config()?)?;
     let path_buf = PathBuf::from(path);
     index.add(&path_buf)?;
@@ -125,7 +125,7 @@ fn run_add(path: &str) -> Result<()> {
 }
 
 fn run_search(target: &str, exclude: Option<&Path>, find_all: bool) -> Result<()> {
-    log::debug!("Running search with target: {}", target);
+    log::debug!("Running search with target: {target}");
 
     let index = Index::open(config::get_index_config()?)?;
 
@@ -149,7 +149,7 @@ fn run_search(target: &str, exclude: Option<&Path>, find_all: bool) -> Result<()
 }
 
 fn run_list(is_json: bool) -> Result<()> {
-    log::debug!("Running list with raw output: {}", is_json);
+    log::debug!("Running list with raw output: {is_json}");
     let index = Index::open(config::get_index_config()?)?;
     if is_json {
         printer::print_json(&index.list()?)
@@ -159,6 +159,6 @@ fn run_list(is_json: bool) -> Result<()> {
 }
 
 fn run_init(shell: &Shell) -> Result<()> {
-    log::debug!("Running init with shell: {:?}", shell);
+    log::debug!("Running init with shell: {shell:?}");
     Ok(init::init_shell(shell)?)
 }

@@ -69,5 +69,5 @@ fn get_datetime_string(systime: &SystemTime) -> String {
         duration.subsec_nanos(),
     )
     .expect("timestamp out of range");
-    format!("{}", datetime)
+    format!("{datetime}")
 }

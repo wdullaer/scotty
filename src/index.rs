@@ -48,7 +48,7 @@ pub struct PathIndexEntry {
 impl Index {
     /// Opens and configures a new sled database with config
     pub fn open(config: Config) -> Result<Index> {
-        log::debug!("Opening db for config: {:?}", config);
+        log::debug!("Opening db for config: {config:?}");
         let db = match config.open() {
             // versions 0.1.0 and 0.2.0 used an older version of sled which has
             // a different serialization format
@@ -123,7 +123,7 @@ impl Index {
     /// Returns a vec with all strings from the index that match the 'target' string
     /// This is the internal implemenation backing find_one and find_all
     fn search(&self, target: &str, exclude: Option<&Path>) -> Result<Vec<String>> {
-        log::debug!("Searching target in index: {}", target);
+        log::debug!("Searching target in index: {target}");
         // Special case an empty target
         if target.is_empty() {
             return Ok(Vec::new());
@@ -139,7 +139,7 @@ impl Index {
         let subseq = automaton::Subsequence::new(target);
         let regex = Builder::new()
             .case_insensitive(true)
-            .build(&format!(".*{}.*", target))?;
+            .build(&format!(".*{target}.*"))?;
         let query = subseq.union(regex);
         match exclude {
             Some(p) => {
@@ -175,14 +175,14 @@ impl Index {
 
         // Search the index for strings that match
         let results = self.search(target, exclude)?;
-        log::debug!("FST result set: {:?}", results);
+        log::debug!("FST result set: {results:?}");
 
         // Score the results
         let score_vec = score_results(&results, target);
-        log::debug!("Scored FST result set: {:?}", score_vec);
+        log::debug!("Scored FST result set: {score_vec:?}");
 
         let best_score = self.get_best_score(score_vec)?;
-        log::debug!("Best result: {:?}", best_score);
+        log::debug!("Best result: {best_score:?}");
 
         Ok(best_score.map(|p| p.path))
     }
