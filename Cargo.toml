@@ -11,7 +11,7 @@ repository = "https://github.com/wdullaer/scotty"
 description = "A chillingly fast dir switcher using fuzzy search."
 
 [dependencies]
-clap = { version = "^4.5.48", features = ["cargo"]}
+clap = { version = "^4.5.49", features = ["cargo"]}
 sled = "^0.34.7"
 thiserror = "^2.0.17"
 anyhow = "^1.0.100"
