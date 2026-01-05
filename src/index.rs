@@ -91,8 +91,7 @@ impl Index {
             .map(|item| {
                 let tuple = item?;
                 let path = PathBuf::from(str::from_utf8(tuple.0.as_ref())?);
-                let timestamp =
-                    bincode::decode_from_slice(tuple.1.as_ref(), bincode::config::legacy())?.0;
+                let timestamp = bincode::deserialize(tuple.1.as_ref())?;
                 Ok(PathIndexEntry { timestamp, path })
             })
             .collect()
@@ -112,7 +111,7 @@ impl Index {
         // Check if the path is already known and update its last modified timestamp
         let path_bytes = path_string.as_bytes();
 
-        let time_bytes = bincode::encode_to_vec(SystemTime::now(), bincode::config::legacy())?;
+        let time_bytes = bincode::serialize(&SystemTime::now())?;
         match self.paths.insert(path_bytes, time_bytes)? {
             // New path: update the fst
             None => self.update_paths_index(path_bytes, merge_fst_sets),
@@ -201,10 +200,7 @@ impl Index {
     fn get_timestamp(&self, path: &Path) -> Result<Option<SystemTime>> {
         let time_bytes = self.paths.get(path.to_string_lossy().as_bytes())?;
         Ok(time_bytes
-            .map(|x| {
-                bincode::borrow_decode_from_slice(x.as_ref(), bincode::config::legacy())
-                    .map(|t| t.0)
-            })
+            .map(|x| bincode::deserialize::<SystemTime>(x.as_ref()))
             .transpose()?)
     }
 
